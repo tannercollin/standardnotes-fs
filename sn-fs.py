@@ -1,26 +1,27 @@
 from __future__ import print_function, absolute_import, division
 
 import errno
+import iso8601
 import logging
 import os
+import time
 
 from stat import S_IFDIR, S_IFREG
 from sys import argv, exit
-from time import time
 
 from fuse import FUSE, FuseOSError, Operations, LoggingMixIn
-from api import StandardNotesAPI
+from itemmanager import ItemManager
 
 
 class StandardNotesFS(LoggingMixIn, Operations):
     def __init__(self, path='.'):
-        self.standard_notes = StandardNotesAPI('tanner@domain.com', 'complexpass')
-        self.notes = self.standard_notes.getNotes()
+        self.item_manager = ItemManager('tanner@domain.com', 'complexpass')
+        self.notes = self.item_manager.getNotes()
 
         self.uid = os.getuid()
         self.gid = os.getgid()
 
-        now = time()
+        now = time.time()
         self.dir_stat = dict(st_mode=(S_IFDIR | 0o755), st_ctime=now,
                             st_mtime=now, st_atime=now, st_nlink=2,
                             st_uid=self.uid, st_gid=self.gid)
@@ -38,7 +39,10 @@ class StandardNotesFS(LoggingMixIn, Operations):
         if path == '/':
             return self.dir_stat
         elif note_name in self.notes:
-            st['st_size'] = len(self.notes[note_name])
+            note = self.notes[note_name]
+            st['st_size'] = len(note['text'])
+            st['st_ctime'] = iso8601.parse_date(note['created']).timestamp()
+            st['st_mtime'] = iso8601.parse_date(note['modified']).timestamp()
             return st
         else:
             raise FuseOSError(errno.ENOENT)
@@ -53,8 +57,9 @@ class StandardNotesFS(LoggingMixIn, Operations):
     def read(self, path, size, offset, fh):
         path_parts = path.split('/')
         note_name = path_parts[1]
+        note = self.notes[note_name]
 
-        return self.notes[note_name][offset : offset + size].encode()
+        return note['text'][offset : offset + size].encode()
 
     def chmod(self, path, mode):
         return 0

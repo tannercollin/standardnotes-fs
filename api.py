@@ -83,31 +83,8 @@ class EncryptionHelper:
 
         return result.decode()
 
-class ItemManager:
-    items = {}
-
-    def mapResponseItemsToLocalItems(self, response_items):
-        for response_item in response_items:
-            uuid = response_item['uuid']
-
-            if response_item['deleted']:
-                if uuid in self.items:
-                    del self.items[uuid]
-                continue
-
-            self.items[uuid] = response_item
-
-    def getNotes(self):
-        notes = {}
-        for key, value in self.items.items():
-            if value['content_type'] == 'Note':
-                note = value['content']
-                notes[note['title']] = note['text'] + '\n'
-        return notes
-
 class StandardNotesAPI:
     encryption_helper = EncryptionHelper()
-    item_manager = ItemManager()
     base_url = 'https://sync.standardnotes.org'
     sync_token = None
 
@@ -120,30 +97,18 @@ class StandardNotesAPI:
         res = self.api.post('/auth/sign_in', {'email': self.username, 'password': self.keys['pw']})
         self.api.addHeader({'Authorization': 'Bearer ' + res['token']})
 
-    def refreshItems(self):
+    def sync(self, dirty_items):
         res = self.api.post('/items/sync', {'sync_token': self.sync_token})
         print(json.dumps(res))
+
         self.sync_token = res['sync_token']
-        self.handleResponseItems(res['retrieved_items'])
+        return self.handleResponseItems(res['retrieved_items'])
 
     def handleResponseItems(self, response_items):
         decrypted_items = self.encryption_helper.pure_decryptResponseItems(response_items, self.keys)
-        self.item_manager.mapResponseItemsToLocalItems(decrypted_items)
-
-    def getNotes(self):
-        self.refreshItems()
-        return self.item_manager.getNotes()
+        return decrypted_items
 
     def __init__(self, username, password):
         self.api = RESTAPI(self.base_url)
         self.username = username
         self.signIn(password)
-
-if __name__ == "__main__":
-    notes = StandardNotesAPI('tanner@domain.com', 'complexpass')
-
-    while True:
-        notes.refreshItems()
-        print(notes.getNotes())
-
-        time.sleep(1)
