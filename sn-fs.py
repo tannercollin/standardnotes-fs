@@ -4,10 +4,10 @@ import errno
 import iso8601
 import logging
 import os
-import time
 
 from stat import S_IFDIR, S_IFREG
 from sys import argv, exit
+from datetime import datetime
 
 from fuse import FUSE, FuseOSError, Operations, LoggingMixIn
 from itemmanager import ItemManager
@@ -16,12 +16,11 @@ from itemmanager import ItemManager
 class StandardNotesFS(LoggingMixIn, Operations):
     def __init__(self, path='.'):
         self.item_manager = ItemManager('tanner@domain.com', 'complexpass')
-        self.notes = self.item_manager.getNotes()
 
         self.uid = os.getuid()
         self.gid = os.getgid()
 
-        now = time.time()
+        now = datetime.now().timestamp()
         self.dir_stat = dict(st_mode=(S_IFDIR | 0o755), st_ctime=now,
                             st_mtime=now, st_atime=now, st_nlink=2,
                             st_uid=self.uid, st_gid=self.gid)
@@ -31,6 +30,8 @@ class StandardNotesFS(LoggingMixIn, Operations):
                             st_uid=self.uid, st_gid=self.gid)
 
     def getattr(self, path, fh=None):
+        self.notes = self.item_manager.getNotes()
+
         st = self.note_stat
 
         path_parts = path.split('/')
@@ -48,6 +49,8 @@ class StandardNotesFS(LoggingMixIn, Operations):
             raise FuseOSError(errno.ENOENT)
 
     def readdir(self, path, fh):
+        self.notes = self.item_manager.getNotes()
+
         dirents = ['.', '..']
 
         if path == '/':
@@ -55,11 +58,26 @@ class StandardNotesFS(LoggingMixIn, Operations):
         return dirents
 
     def read(self, path, size, offset, fh):
+        self.notes = self.item_manager.getNotes()
+
         path_parts = path.split('/')
         note_name = path_parts[1]
         note = self.notes[note_name]
 
         return note['text'][offset : offset + size].encode()
+
+    def write(self, path, data, offset, fh):
+        self.notes = self.item_manager.getNotes()
+
+        path_parts = path.split('/')
+        note_name = path_parts[1]
+        note = self.notes[note_name]
+        text = note['text'][:offset] + data.decode()
+        uuid = note['uuid']
+
+        self.item_manager.writeNote(uuid, text)
+
+        return len(data)
 
     def chmod(self, path, mode):
         return 0
@@ -95,9 +113,6 @@ class StandardNotesFS(LoggingMixIn, Operations):
         return 0
 
     def utimens(self, path, times=None):
-        return 0
-
-    def write(self, path, data, offset, fh):
         return 0
 
 if __name__ == '__main__':

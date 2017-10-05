@@ -3,7 +3,9 @@ from api import StandardNotesAPI
 class ItemManager:
     items = {}
 
-    def mapResponseItemsToLocalItems(self, response_items):
+    def mapResponseItemsToLocalItems(self, response_items, metadata_only=False):
+        DATA_KEYS = ['content', 'enc_item_key', 'auth_hash']
+
         for response_item in response_items:
             uuid = response_item['uuid']
 
@@ -12,7 +14,28 @@ class ItemManager:
                     del self.items[uuid]
                 continue
 
-            self.items[uuid] = response_item
+            response_item['dirty'] = False
+
+            if uuid not in self.items:
+                self.items[uuid] = {}
+
+            for key, value in response_item.items():
+                if metadata_only and key in DATA_KEYS:
+                    continue
+                self.items[uuid][key] = value
+
+    def syncItems(self):
+        dirty_items = [item for uuid, item in self.items.items() if item['dirty']]
+
+        # remove keys (note: this removed them from self.items as well)
+        for item in dirty_items:
+            item.pop('dirty', None)
+            item.pop('updated_at', None)
+
+        response = self.standard_notes.sync(dirty_items)
+        print('info: ', response)
+        self.mapResponseItemsToLocalItems(response['response_items'])
+        self.mapResponseItemsToLocalItems(response['saved_items'], metadata_only=True)
 
     def getNotes(self):
         notes = {}
@@ -37,7 +60,13 @@ class ItemManager:
                         uuid=item['uuid'])
         return notes
 
+    def writeNote(self, uuid, text):
+        item = self.items[uuid]
+
+        item['content']['text'] = text.strip()
+        item['dirty'] = True
+        self.syncItems()
+
     def __init__(self, username, password):
         self.standard_notes = StandardNotesAPI(username, password)
-        response_items = self.standard_notes.sync(None)
-        self.mapResponseItemsToLocalItems(response_items)
+        self.syncItems()
