@@ -27,13 +27,12 @@ class ItemManager:
     def syncItems(self):
         dirty_items = [item for uuid, item in self.items.items() if item['dirty']]
 
-        # remove keys (note: this removed them from self.items as well)
+        # remove keys (note: this removes them from self.items as well)
         for item in dirty_items:
             item.pop('dirty', None)
             item.pop('updated_at', None)
 
         response = self.standard_notes.sync(dirty_items)
-        print('info: ', response)
         self.mapResponseItemsToLocalItems(response['response_items'])
         self.mapResponseItemsToLocalItems(response['saved_items'], metadata_only=True)
 
@@ -62,7 +61,6 @@ class ItemManager:
 
     def writeNote(self, uuid, text):
         item = self.items[uuid]
-
         item['content']['text'] = text.strip()
         item['dirty'] = True
         self.syncItems()
