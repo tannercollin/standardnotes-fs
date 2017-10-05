@@ -1,4 +1,5 @@
 from api import StandardNotesAPI
+from uuid import uuid1
 
 class ItemManager:
     items = {}
@@ -64,6 +65,19 @@ class ItemManager:
         item['content']['text'] = text.strip()
         item['dirty'] = True
         self.syncItems()
+
+    def createNote(self, name, time):
+        uuid = str(uuid1())
+        content = dict(title=name, text='', references=[])
+        self.items[uuid] = dict(content_type='Note',
+                dirty=True,
+                auth_hash=None,
+                uuid=uuid,
+                created_at=time,
+                updated_at=time,
+                enc_item_key='',
+                content=content)
+        return 0
 
     def __init__(self, username, password):
         self.standard_notes = StandardNotesAPI(username, password)

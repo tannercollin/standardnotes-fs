@@ -79,13 +79,18 @@ class StandardNotesFS(LoggingMixIn, Operations):
 
         return len(data)
 
+    def create(self, path, mode):
+        path_parts = path.split('/')
+        note_name = path_parts[1]
+        now = datetime.utcnow().isoformat()[:-3] + 'Z' # hack
+
+        self.item_manager.createNote(note_name, now)
+        return 0
+
     def chmod(self, path, mode):
         return 0
 
     def chown(self, path, uid, gid):
-        return 0
-
-    def create(self, path, mode):
         return 0
 
     def destroy(self, path):
