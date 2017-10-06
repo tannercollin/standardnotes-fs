@@ -12,7 +12,6 @@ from datetime import datetime
 from fuse import FUSE, FuseOSError, Operations, LoggingMixIn
 from itemmanager import ItemManager
 
-
 class StandardNotesFS(LoggingMixIn, Operations):
     def __init__(self, path='.'):
         self.item_manager = ItemManager('tanner@domain.com', 'complexpass')
@@ -87,6 +86,18 @@ class StandardNotesFS(LoggingMixIn, Operations):
         self.item_manager.createNote(note_name, now)
         return 0
 
+    def unlink(self, path):
+        self.notes = self.item_manager.getNotes()
+
+        path_parts = path.split('/')
+        note_name = path_parts[1]
+        note = self.notes[note_name]
+        uuid = note['uuid']
+
+        self.item_manager.deleteNote(uuid)
+
+        return 0
+
     def chmod(self, path, mode):
         return 0
 
@@ -112,9 +123,6 @@ class StandardNotesFS(LoggingMixIn, Operations):
         return 0
 
     def truncate(self, path, length, fh=None):
-        return 0
-
-    def unlink(self, path):
         return 0
 
     def utimens(self, path, times=None):

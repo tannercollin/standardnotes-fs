@@ -79,6 +79,12 @@ class ItemManager:
                 content=content)
         return 0
 
+    def deleteNote(self, uuid):
+        item = self.items[uuid]
+        item['deleted'] = True
+        item['dirty'] = True
+        self.syncItems()
+
     def __init__(self, username, password):
         self.standard_notes = StandardNotesAPI(username, password)
         self.syncItems()
