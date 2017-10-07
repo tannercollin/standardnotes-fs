@@ -20,15 +20,17 @@ class RESTAPI:
 
 class StandardNotesAPI:
     encryption_helper = EncryptionHelper()
-    base_url = 'https://sync.standardnotes.org'
     sync_token = None
 
     def getAuthParamsForEmail(self):
         return self.api.get('/auth/params', dict(email=self.username))
 
-    def signIn(self, password):
+    def genKeys(self, password):
         pw_info = self.getAuthParamsForEmail()
-        self.keys = self.encryption_helper.pure_generatePasswordAndKey(password, pw_info['pw_salt'], pw_info['pw_cost'])
+        return self.encryption_helper.pure_generatePasswordAndKey(password, pw_info['pw_salt'], pw_info['pw_cost'])
+
+    def signIn(self, keys):
+        self.keys = keys
         res = self.api.post('/auth/sign_in', dict(email=self.username, password=self.keys['pw']))
         self.api.addHeader(dict(Authorization='Bearer ' + res['token']))
 
@@ -48,7 +50,6 @@ class StandardNotesAPI:
         saved_items = self.encryption_helper.decryptResponseItems(response['saved_items'], self.keys)
         return dict(response_items=response_items, saved_items=saved_items)
 
-    def __init__(self, username, password):
-        self.api = RESTAPI(self.base_url)
+    def __init__(self, base_url, username):
+        self.api = RESTAPI(base_url)
         self.username = username
-        self.signIn(password)
