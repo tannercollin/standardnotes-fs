@@ -33,7 +33,7 @@ class ItemManager:
             item.pop('dirty', None)
             item.pop('updated_at', None)
 
-        response = self.standard_notes.sync(dirty_items)
+        response = self.sn_api.sync(dirty_items)
         self.mapResponseItemsToLocalItems(response['response_items'])
         self.mapResponseItemsToLocalItems(response['saved_items'], metadata_only=True)
 
@@ -85,6 +85,6 @@ class ItemManager:
         item['dirty'] = True
         self.syncItems()
 
-    def __init__(self, username, password):
-        self.standard_notes = StandardNotesAPI(username, password)
+    def __init__(self, sn_api):
+        self.sn_api = sn_api
         self.syncItems()

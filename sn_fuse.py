@@ -12,9 +12,9 @@ from datetime import datetime
 from fuse import FUSE, FuseOSError, Operations, LoggingMixIn
 from itemmanager import ItemManager
 
-class StandardNotesFS(LoggingMixIn, Operations):
-    def __init__(self, path='.'):
-        self.item_manager = ItemManager('tanner@domain.com', 'complexpass')
+class StandardNotesFUSE(LoggingMixIn, Operations):
+    def __init__(self, sn_api, path='.'):
+        self.item_manager = ItemManager(sn_api)
 
         self.uid = os.getuid()
         self.gid = os.getgid()
@@ -135,4 +135,4 @@ if __name__ == '__main__':
 
     logging.basicConfig(level=logging.DEBUG)
 
-    fuse = FUSE(StandardNotesFS(), argv[1], foreground=True, nothreads=True)
+    fuse = FUSE(StandardNotesFUSE(), argv[1], foreground=True, nothreads=True)
