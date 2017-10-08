@@ -81,6 +81,11 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
     def create(self, path, mode):
         path_parts = path.split('/')
         note_name = path_parts[1]
+
+        # disallow hidden files (usually editor / OS files)
+        if note_name[0] == '.':
+            raise FuseOSError(errno.EPERM)
+
         now = datetime.utcnow().isoformat()[:-3] + 'Z' # hack
 
         self.item_manager.createNote(note_name, now)
