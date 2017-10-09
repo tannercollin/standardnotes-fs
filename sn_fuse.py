@@ -139,12 +139,3 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
 
     def utimens(self, path, times=None):
         return 0
-
-if __name__ == '__main__':
-    if len(argv) != 2:
-        print('usage: %s <mountpoint>' % argv[0])
-        exit(1)
-
-    logging.basicConfig(level=logging.DEBUG)
-
-    fuse = FUSE(StandardNotesFUSE(), argv[1], foreground=True, nothreads=True)

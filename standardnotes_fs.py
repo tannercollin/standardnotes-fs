@@ -53,11 +53,13 @@ def main():
 
     # configure logging
     if args.verbosity == 1:
-        logging.basicConfig(level=logging.INFO)
+        log_level = logging.INFO
     elif args.verbosity == 2:
-        logging.basicConfig(level=logging.DEBUG)
+        log_level = logging.DEBUG
     else:
-        logging.basicConfig(level=logging.CRITICAL)
+        log_level = logging.CRITICAL
+    logging.basicConfig(level=log_level,
+                        format='%(levelname)-8s: %(message)s')
     if args.verbosity: args.foreground = True
 
     config_file = args.config if args.config else CONFIG_FILE
@@ -74,7 +76,7 @@ def main():
 
     # make sure mountpoint is specified
     if not args.mountpoint:
-        logging.critical('No mountpoint specified.')
+        print('No mountpoint specified.')
         sys.exit(1)
 
     # load config file settings
@@ -85,7 +87,7 @@ def main():
             logging.info(log_msg % str(config_file.parent))
         except OSError:
             log_msg = 'Error creating config file directory "%s".'
-            logging.critical(log_msg % str(config_file.parent))
+            print(log_msg % str(config_file.parent))
             sys.exit(1)
 
         try:
@@ -130,7 +132,7 @@ def main():
         login_success = True
     except:
         log_msg = 'Failed to log into account "%s".'
-        logging.critical(log_msg % username)
+        print(log_msg % username)
         login_success = False
 
     # write settings back if good, clear if not
@@ -145,11 +147,11 @@ def main():
                     logging.info(log_msg % str(config_file))
                 else:
                     log_msg = 'Clearing config file "%s".'
-                    logging.info(log_msg % username)
+                    logging.info(log_msg % config_file)
             config_file.chmod(0o600)
         except OSError:
             log_msg = 'Unable to write config file "%s".'
-            logging.error(log_msg % str(config_file))
+            logging.warning(log_msg % str(config_file))
 
     if login_success:
         logging.info('Starting FUSE filesystem.')
