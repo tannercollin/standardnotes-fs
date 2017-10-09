@@ -62,6 +62,7 @@ def main():
                         format='%(levelname)-8s: %(message)s')
     if args.verbosity: args.foreground = True
 
+    # figure out config file
     config_file = args.config if args.config else CONFIG_FILE
     config_file = pathlib.Path(config_file)
 
@@ -126,6 +127,7 @@ def main():
         sn_api = StandardNotesAPI(sync_url, username)
         if not keys:
             keys = sn_api.genKeys(password)
+            del password
         sn_api.signIn(keys)
         log_msg = 'Successfully logged into account "%s".'
         logging.info(log_msg % username)
@@ -155,7 +157,10 @@ def main():
 
     if login_success:
         logging.info('Starting FUSE filesystem.')
-        fuse = FUSE(StandardNotesFUSE(sn_api), args.mountpoint, foreground=args.foreground, nothreads=True)
+        fuse = FUSE(StandardNotesFUSE(sn_api),
+                    args.mountpoint,
+                    foreground=args.foreground,
+                    nothreads=True) # benefits don't outweigh the costs
 
     logging.info('Exiting.')
 
