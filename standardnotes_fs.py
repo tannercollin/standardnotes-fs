@@ -14,7 +14,6 @@ from fuse import FUSE
 
 OFFICIAL_SERVER_URL = 'https://sync.standardnotes.org'
 APP_NAME = 'standardnotes-fs'
-logging.basicConfig(level=logging.DEBUG)
 
 # path settings
 cfg_env = os.environ.get('SN_FS_CONFIG_PATH')
@@ -28,9 +27,13 @@ def parse_options():
                         help='Standard Notes username to log in with')
     parser.add_argument('--password',
                         help='Standard Notes password to log in with\n'
-                             'NOTE: It is NOT recommended to use this! The\n'
-                             '      password may be stored in history, so\n'
+                             'NOTE: It is NOT recommended to use this option!\n'
+                             '      The password may be stored in history, so\n'
                              '      use the password prompt instead.')
+    parser.add_argument('-v', '--verbosity', action='count',
+                        help='output verbosity -v or -vv (implies --foreground)')
+    parser.add_argument('--foreground', action='store_true',
+                        help='run standardnotes-fs in the foreground')
     parser.add_argument('--sync-url',
                         help='URL of Standard File sync server. Defaults to:\n'
                         ''+OFFICIAL_SERVER_URL)
@@ -48,6 +51,15 @@ def main():
     config = ConfigParser()
     keys = {}
 
+    # configure logging
+    if args.verbosity == 1:
+        logging.basicConfig(level=logging.INFO)
+    elif args.verbosity == 2:
+        logging.basicConfig(level=logging.DEBUG)
+    else:
+        logging.basicConfig(level=logging.CRITICAL)
+    if args.verbosity: args.foreground = True
+
     config_file = args.config if args.config else CONFIG_FILE
     config_file = pathlib.Path(config_file)
 
@@ -55,9 +67,9 @@ def main():
     if args.logout:
         try:
             config_file.unlink()
-            print('Config file deleted.')
+            print('Config file deleted and logged out.')
         except OSError:
-            print('Already logged out.')
+            logging.info('Already logged out.')
         sys.exit(0)
 
     # make sure mountpoint is specified
@@ -69,17 +81,21 @@ def main():
     if not args.no_config_file:
         try:
             config_file.parent.mkdir(mode=0o0700, parents=True, exist_ok=True)
+            log_msg = 'Using config directory "%s".'
+            logging.info(log_msg % str(config_file.parent))
         except OSError:
-            err_msg = 'Error creating directory "%s".'
-            logging.critical(err_msg % str(config_file.parent))
+            log_msg = 'Error creating config file directory "%s".'
+            logging.critical(log_msg % str(config_file.parent))
             sys.exit(1)
 
         try:
             with config_file.open() as f:
                 config.read_file(f)
+                log_msg = 'Loaded config file "%s".'
+                logging.info(log_msg % str(config_file))
         except OSError:
-            err_msg = 'Unable to read config file "%s".'
-            logging.info(err_msg % str(config_file))
+            log_msg = 'Unable to read config file "%s".'
+            logging.info(log_msg % str(config_file))
 
     # figure out all login params
     if args.sync_url:
@@ -88,6 +104,8 @@ def main():
         sync_url = config.get('user', 'sync_url')
     else:
         sync_url = OFFICIAL_SERVER_URL
+    log_msg = 'Using sync URL "%s".'
+    logging.info(log_msg % sync_url)
 
     if config.has_option('user', 'username') \
         and config.has_section('keys') \
@@ -107,14 +125,13 @@ def main():
         if not keys:
             keys = sn_api.genKeys(password)
         sn_api.signIn(keys)
+        log_msg = 'Successfully logged into account "%s".'
+        logging.info(log_msg % username)
         login_success = True
     except:
-        err_msg = 'Failed to log into account "%s".'
-        logging.critical(err_msg % username)
+        log_msg = 'Failed to log into account "%s".'
+        logging.critical(log_msg % username)
         login_success = False
-
-    if login_success:
-        fuse = FUSE(StandardNotesFUSE(sn_api), args.mountpoint, foreground=True, nothreads=True)
 
     # write settings back if good, clear if not
     if not args.no_config_file:
@@ -124,9 +141,21 @@ def main():
             with config_file.open(mode='w+') as f:
                 if login_success:
                     config.write(f)
+                    log_msg = 'Config written to file "%s".'
+                    logging.info(log_msg % str(config_file))
+                else:
+                    log_msg = 'Clearing config file "%s".'
+                    logging.info(log_msg % username)
+            config_file.chmod(0o600)
         except OSError:
-            err_msg = 'Unable to write config file "%s".'
-            logging.error(err_msg % str(config_file))
+            log_msg = 'Unable to write config file "%s".'
+            logging.error(log_msg % str(config_file))
+
+    if login_success:
+        logging.info('Starting FUSE filesystem.')
+        fuse = FUSE(StandardNotesFUSE(sn_api), args.mountpoint, foreground=args.foreground, nothreads=True)
+
+    logging.info('Exiting.')
 
 if __name__ == '__main__':
     main()

@@ -71,8 +71,13 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
         path_parts = path.split('/')
         note_name = path_parts[1]
         note = self.notes[note_name]
-        text = note['text'][:offset] + data.decode()
         uuid = note['uuid']
+
+        try:
+            text = note['text'][:offset] + data.decode()
+        except UnicodeError:
+            logging.error('Unable to parse non-unicode data.')
+            raise FuseOSError(errno.EIO)
 
         self.item_manager.writeNote(uuid, text)
 
@@ -84,6 +89,7 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
 
         # disallow hidden files (usually editor / OS files)
         if note_name[0] == '.':
+            logging.error('Creation of hidden files is disabled.')
             raise FuseOSError(errno.EPERM)
 
         now = datetime.utcnow().isoformat()[:-3] + 'Z' # hack
@@ -103,6 +109,10 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
 
         return 0
 
+    def mkdir(self, path, mode):
+        logging.error('Creation of directories is disabled.')
+        raise FuseOSError(errno.EPERM)
+
     def chmod(self, path, mode):
         return 0
 
@@ -110,9 +120,6 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
         return 0
 
     def destroy(self, path):
-        return 0
-
-    def mkdir(self, path, mode):
         return 0
 
     def readlink(self, path):
