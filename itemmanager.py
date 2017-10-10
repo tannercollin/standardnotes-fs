@@ -60,6 +60,11 @@ class ItemManager:
                         uuid=item['uuid'])
         return notes
 
+    def touchNote(self, uuid):
+        item = self.items[uuid]
+        item['dirty'] = True
+        self.syncItems()
+
     def writeNote(self, uuid, text):
         item = self.items[uuid]
         item['content']['text'] = text.strip()
@@ -77,7 +82,7 @@ class ItemManager:
                 updated_at=time,
                 enc_item_key='',
                 content=content)
-        return 0
+        self.syncItems()
 
     def deleteNote(self, uuid):
         item = self.items[uuid]

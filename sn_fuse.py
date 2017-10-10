@@ -8,6 +8,7 @@ import os
 from stat import S_IFDIR, S_IFREG
 from sys import argv, exit
 from datetime import datetime
+from pathlib import PurePath
 
 from fuse import FUSE, FuseOSError, Operations, LoggingMixIn
 from itemmanager import ItemManager
@@ -15,6 +16,7 @@ from itemmanager import ItemManager
 class StandardNotesFUSE(LoggingMixIn, Operations):
     def __init__(self, sn_api, path='.'):
         self.item_manager = ItemManager(sn_api)
+        self.notes = self.item_manager.getNotes()
 
         self.uid = os.getuid()
         self.gid = os.getgid()
@@ -28,28 +30,29 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
                             st_mtime=now, st_atime=now, st_nlink=1,
                             st_uid=self.uid, st_gid=self.gid)
 
+    def _pathToNote(self, path):
+        pp = PurePath(path)
+        note_name = pp.parts[1]
+        note = self.notes[note_name]
+        return note, note['uuid']
+
     def getattr(self, path, fh=None):
         self.notes = self.item_manager.getNotes()
 
-        st = self.note_stat
-
-        path_parts = path.split('/')
-        note_name = path_parts[1]
-
         if path == '/':
             return self.dir_stat
-        elif note_name in self.notes:
-            note = self.notes[note_name]
+
+        try:
+            note, uuid = self._pathToNote(path)
+            st = self.note_stat
             st['st_size'] = len(note['text'])
             st['st_ctime'] = iso8601.parse_date(note['created']).timestamp()
             st['st_mtime'] = iso8601.parse_date(note['modified']).timestamp()
             return st
-        else:
+        except KeyError:
             raise FuseOSError(errno.ENOENT)
 
     def readdir(self, path, fh):
-        self.notes = self.item_manager.getNotes()
-
         dirents = ['.', '..']
 
         if path == '/':
@@ -57,21 +60,17 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
         return dirents
 
     def read(self, path, size, offset, fh):
-        self.notes = self.item_manager.getNotes()
-
-        path_parts = path.split('/')
-        note_name = path_parts[1]
-        note = self.notes[note_name]
-
+        note, uuid = self._pathToNote(path)
         return note['text'][offset : offset + size].encode()
 
-    def write(self, path, data, offset, fh):
-        self.notes = self.item_manager.getNotes()
+    def truncate(self, path, length, fh=None):
+        note, uuid = self._pathToNote(path)
+        text = note['text'][:length]
 
-        path_parts = path.split('/')
-        note_name = path_parts[1]
-        note = self.notes[note_name]
-        uuid = note['uuid']
+        self.item_manager.writeNote(uuid, text)
+
+    def write(self, path, data, offset, fh):
+        note, uuid = self._pathToNote(path)
 
         try:
             text = note['text'][:offset] + data.decode()
@@ -98,20 +97,20 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
         return 0
 
     def unlink(self, path):
-        self.notes = self.item_manager.getNotes()
-
-        path_parts = path.split('/')
-        note_name = path_parts[1]
-        note = self.notes[note_name]
-        uuid = note['uuid']
+        note, uuid = self._pathToNote(path)
 
         self.item_manager.deleteNote(uuid)
-
         return 0
 
     def mkdir(self, path, mode):
         logging.error('Creation of directories is disabled.')
         raise FuseOSError(errno.EPERM)
+
+    def utimens(self, path, times=None):
+        note, uuid = self._pathToNote(path)
+
+        self.item_manager.touchNote(uuid)
+        return 0
 
     def chmod(self, path, mode):
         return 0
@@ -132,10 +131,4 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
         return 0
 
     def symlink(self, target, source):
-        return 0
-
-    def truncate(self, path, length, fh=None):
-        return 0
-
-    def utimens(self, path, times=None):
         return 0
