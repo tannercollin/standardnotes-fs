@@ -84,6 +84,12 @@ class ItemManager:
                 content=content)
         self.syncItems()
 
+    def renameNote(self, uuid, new_note_name):
+        item = self.items[uuid]
+        item['content']['title'] = new_note_name
+        item['dirty'] = True
+        self.syncItems()
+
     def deleteNote(self, uuid):
         item = self.items[uuid]
         item['deleted'] = True

@@ -66,7 +66,6 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
     def truncate(self, path, length, fh=None):
         note, uuid = self._pathToNote(path)
         text = note['text'][:length]
-
         self.item_manager.writeNote(uuid, text)
 
     def write(self, path, data, offset, fh):
@@ -79,7 +78,6 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
             raise FuseOSError(errno.EIO)
 
         self.item_manager.writeNote(uuid, text)
-
         return len(data)
 
     def create(self, path, mode):
@@ -98,7 +96,6 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
 
     def unlink(self, path):
         note, uuid = self._pathToNote(path)
-
         self.item_manager.deleteNote(uuid)
         return 0
 
@@ -108,8 +105,14 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
 
     def utimens(self, path, times=None):
         note, uuid = self._pathToNote(path)
-
         self.item_manager.touchNote(uuid)
+        return 0
+
+    def rename(self, old, new):
+        note, uuid = self._pathToNote(old)
+        new_path_parts = new.split('/')
+        new_note_name = new_path_parts[1]
+        self.item_manager.renameNote(uuid, new_note_name)
         return 0
 
     def chmod(self, path, mode):
@@ -122,9 +125,6 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
         return 0
 
     def readlink(self, path):
-        return 0
-
-    def rename(self, old, new):
         return 0
 
     def rmdir(self, path):
