@@ -116,10 +116,12 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
         return 0
 
     def chmod(self, path, mode):
-        return 0
+        logging.error('chmod is disabled.')
+        raise FuseOSError(errno.EPERM)
 
     def chown(self, path, uid, gid):
-        return 0
+        logging.error('chown is disabled.')
+        raise FuseOSError(errno.EPERM)
 
     def destroy(self, path):
         return 0
