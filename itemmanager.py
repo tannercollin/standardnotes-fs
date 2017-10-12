@@ -56,20 +56,18 @@ class ItemManager:
 
                 notes[title] = dict(text=text,
                         created=item['created_at'],
-                        modified=item['updated_at'],
+                        modified=item.get('updated_at', item['created_at']),
                         uuid=item['uuid'])
         return notes
 
     def touchNote(self, uuid):
         item = self.items[uuid]
         item['dirty'] = True
-        self.syncItems()
 
     def writeNote(self, uuid, text):
         item = self.items[uuid]
         item['content']['text'] = text.strip()
         item['dirty'] = True
-        self.syncItems()
 
     def createNote(self, name, time):
         uuid = str(uuid1())
@@ -82,19 +80,16 @@ class ItemManager:
                 updated_at=time,
                 enc_item_key='',
                 content=content)
-        self.syncItems()
 
     def renameNote(self, uuid, new_note_name):
         item = self.items[uuid]
         item['content']['title'] = new_note_name
         item['dirty'] = True
-        self.syncItems()
 
     def deleteNote(self, uuid):
         item = self.items[uuid]
         item['deleted'] = True
         item['dirty'] = True
-        self.syncItems()
 
     def __init__(self, sn_api):
         self.sn_api = sn_api

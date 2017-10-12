@@ -13,6 +13,8 @@ from sn_fuse import StandardNotesFUSE
 from fuse import FUSE
 
 OFFICIAL_SERVER_URL = 'https://sync.standardnotes.org'
+DEFAULT_SYNC_SEC = 30
+MINIMUM_SYNC_SEC = 5
 APP_NAME = 'standardnotes-fs'
 
 # path settings
@@ -34,12 +36,14 @@ def parse_options():
                         help='output verbosity -v or -vv (implies --foreground)')
     parser.add_argument('--foreground', action='store_true',
                         help='run standardnotes-fs in the foreground')
+    parser.add_argument('--sync-sec', type=int, default=DEFAULT_SYNC_SEC,
+                        help='how many seconds between each sync. Default: 10')
     parser.add_argument('--sync-url',
                         help='URL of Standard File sync server. Defaults to:\n'
                         ''+OFFICIAL_SERVER_URL)
     parser.add_argument('--no-config-file', action='store_true',
                         help='don\'t load or create a config file')
-    parser.add_argument('--config',
+    parser.add_argument('--config', default=CONFIG_FILE,
                         help='specify a config file location. Defaults to:\n'
                         ''+str(CONFIG_FILE))
     parser.add_argument('--logout', action='store_true',
@@ -63,8 +67,7 @@ def main():
     if args.verbosity: args.foreground = True
 
     # figure out config file
-    config_file = args.config if args.config else CONFIG_FILE
-    config_file = pathlib.Path(config_file)
+    config_file = pathlib.Path(args.config)
 
     # logout and quit if wanted
     if args.logout:
@@ -79,6 +82,14 @@ def main():
     if not args.mountpoint:
         print('No mountpoint specified.')
         sys.exit(1)
+
+    # keep sync_sec above the minimum sync time
+    if args.sync_sec < MINIMUM_SYNC_SEC:
+        sync_sec = MINIMUM_SYNC_SEC
+        print('Sync interval must be at least', MINIMUM_SYNC_SEC,
+              'seconds. Using that instead.')
+    else:
+        sync_sec = args.sync_sec
 
     # load config file settings
     if not args.no_config_file:
@@ -157,7 +168,7 @@ def main():
 
     if login_success:
         logging.info('Starting FUSE filesystem.')
-        fuse = FUSE(StandardNotesFUSE(sn_api),
+        fuse = FUSE(StandardNotesFUSE(sn_api, sync_sec),
                     args.mountpoint,
                     foreground=args.foreground,
                     nothreads=True) # benefits don't outweigh the costs
