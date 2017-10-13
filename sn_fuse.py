@@ -34,6 +34,8 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
         self.run_sync = Event()
         self.stop_sync = Event()
         self.sync_thread = Thread(target=self._syncThread)
+
+    def init(self, path):
         self.sync_thread.start()
 
     def destroy(self, path):
