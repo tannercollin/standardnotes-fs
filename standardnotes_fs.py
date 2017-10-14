@@ -1,17 +1,17 @@
-import appdirs
 import argparse
+from configparser import ConfigParser
+from getpass import getpass
 import logging
 import os
 import pathlib
 import sys
 
-from configparser import ConfigParser
-from getpass import getpass
-
-from api import StandardNotesAPI, SNAPIException
-from sn_fuse import StandardNotesFUSE
+import appdirs
 from fuse import FUSE
 from requests.exceptions import ConnectionError, MissingSchema
+
+from api import SNAPIException, StandardNotesAPI
+from sn_fuse import StandardNotesFUSE
 
 OFFICIAL_SERVER_URL = 'https://sync.standardnotes.org'
 DEFAULT_SYNC_SEC = 30
@@ -38,7 +38,8 @@ def parse_options():
     parser.add_argument('--foreground', action='store_true',
                         help='run standardnotes-fs in the foreground')
     parser.add_argument('--sync-sec', type=int, default=DEFAULT_SYNC_SEC,
-                        help='how many seconds between each sync. Default: 10')
+                        help='how many seconds between each sync. Default: '
+                        ''+str(DEFAULT_SYNC_SEC))
     parser.add_argument('--sync-url',
                         help='URL of Standard File sync server. Defaults to:\n'
                         ''+OFFICIAL_SERVER_URL)
@@ -123,25 +124,25 @@ def main():
     log_msg = 'Using sync URL "%s".'
     logging.info(log_msg % sync_url)
 
-    if config.has_option('user', 'username') \
-        and config.has_section('keys') \
-        and not args.username \
-        and not args.password:
+    if (config.has_option('user', 'username')
+        and config.has_section('keys')
+        and not args.username
+        and not args.password):
             username = config.get('user', 'username')
             keys = dict(config.items('keys'))
     else:
-        username = args.username if args.username else \
-                   input('Please enter your Standard Notes username: ')
-        password = args.password if args.password else \
-                   getpass('Please enter your password (hidden): ')
+        username = (args.username if args.username else
+                    input('Please enter your Standard Notes username: '))
+        password = (args.password if args.password else
+                    getpass('Please enter your password (hidden): '))
 
     # log the user in
     try:
         sn_api = StandardNotesAPI(sync_url, username)
         if not keys:
-            keys = sn_api.genKeys(password)
+            keys = sn_api.gen_keys(password)
             del password
-        sn_api.signIn(keys)
+        sn_api.sign_in(keys)
         log_msg = 'Successfully logged into account "%s".'
         logging.info(log_msg % username)
         login_success = True
@@ -164,10 +165,9 @@ def main():
                                           keys=keys))
                     config.write(f)
                     log_msg = 'Config written to file "%s".'
-                    logging.info(log_msg % str(config_file))
                 else:
                     log_msg = 'Clearing config file "%s".'
-                    logging.info(log_msg % config_file)
+                logging.info(log_msg % config_file)
             config_file.chmod(0o600)
         except OSError:
             log_msg = 'Unable to write config file "%s".'
