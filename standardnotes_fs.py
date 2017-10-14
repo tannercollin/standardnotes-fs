@@ -8,9 +8,10 @@ import sys
 from configparser import ConfigParser
 from getpass import getpass
 
-from api import StandardNotesAPI
+from api import StandardNotesAPI, SNAPIException
 from sn_fuse import StandardNotesFUSE
 from fuse import FUSE
+from requests.exceptions import ConnectionError, MissingSchema
 
 OFFICIAL_SERVER_URL = 'https://sync.standardnotes.org'
 DEFAULT_SYNC_SEC = 30
@@ -54,6 +55,7 @@ def main():
     args = parse_options()
     config = ConfigParser()
     keys = {}
+    login_success = False
 
     # configure logging
     if args.verbosity == 1:
@@ -61,7 +63,7 @@ def main():
     elif args.verbosity == 2:
         log_level = logging.DEBUG
     else:
-        log_level = logging.CRITICAL
+        log_level = logging.ERROR
     logging.basicConfig(level=log_level,
                         format='%(levelname)-8s: %(message)s')
     if args.verbosity: args.foreground = True
@@ -143,18 +145,23 @@ def main():
         log_msg = 'Successfully logged into account "%s".'
         logging.info(log_msg % username)
         login_success = True
-    except:
-        log_msg = 'Failed to log into account "%s".'
-        print(log_msg % username)
-        login_success = False
+    except SNAPIException as e:
+        print(e)
+    except ConnectionError:
+        log_msg = 'Unable to connect to the sync server at "%s".'
+        print(log_msg % sync_url)
+    except MissingSchema:
+        log_msg = 'Invalid sync server url "%s".'
+        print(log_msg % sync_url)
 
     # write settings back if good, clear if not
     if not args.no_config_file:
-        config.read_dict(dict(user=dict(sync_url=sync_url, username=username),
-                              keys=keys))
         try:
             with config_file.open(mode='w+') as f:
                 if login_success:
+                    config.read_dict(dict(user=dict(sync_url=sync_url,
+                                                    username=username),
+                                          keys=keys))
                     config.write(f)
                     log_msg = 'Config written to file "%s".'
                     logging.info(log_msg % str(config_file))
@@ -168,10 +175,13 @@ def main():
 
     if login_success:
         logging.info('Starting FUSE filesystem.')
-        fuse = FUSE(StandardNotesFUSE(sn_api, sync_sec),
-                    args.mountpoint,
-                    foreground=args.foreground,
-                    nothreads=True) # benefits don't outweigh the costs
+        try:
+            fuse = FUSE(StandardNotesFUSE(sn_api, sync_sec),
+                        args.mountpoint,
+                        foreground=args.foreground,
+                        nothreads=True) # FUSE can't make threads, but we can
+        except RuntimeError as e:
+            print('Error mounting file system.')
 
     logging.info('Exiting.')
 

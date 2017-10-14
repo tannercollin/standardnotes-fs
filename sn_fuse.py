@@ -12,6 +12,7 @@ from threading import Thread, Event
 
 from fuse import FUSE, FuseOSError, Operations, LoggingMixIn
 from itemmanager import ItemManager
+from requests.exceptions import ConnectionError
 
 class StandardNotesFUSE(LoggingMixIn, Operations):
     def __init__(self, sn_api, sync_sec, path='.'):
@@ -51,7 +52,10 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
             manually_synced = self.run_sync.wait(timeout=self.sync_sec)
             if not manually_synced: logging.info('Auto-syncing items...')
             time.sleep(0.1) # fixes race condition of quick create() then write()
-            self.item_manager.syncItems()
+            try:
+                self.item_manager.syncItems()
+            except ConnectionError:
+                logging.error('Unable to connect to sync server. Retrying...')
 
     def _syncNow(self):
         self.run_sync.set()
@@ -86,7 +90,7 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
 
     def read(self, path, size, offset, fh):
         note, uuid = self._pathToNote(path)
-        return note['text'][offset : offset + size].encode()
+        return note['text'][offset : offset + size]
 
     def truncate(self, path, length, fh=None):
         note, uuid = self._pathToNote(path)
@@ -97,14 +101,14 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
 
     def write(self, path, data, offset, fh):
         note, uuid = self._pathToNote(path)
+        text = note['text'][:offset] + data
 
         try:
-            text = note['text'][:offset] + data.decode()
+            self.item_manager.writeNote(uuid, text)
         except UnicodeError:
             logging.error('Unable to parse non-unicode data.')
             raise FuseOSError(errno.EIO)
 
-        self.item_manager.writeNote(uuid, text)
         self._syncNow()
         return len(data)
 

@@ -44,9 +44,16 @@ class ItemManager:
         for uuid, item in sorted_items:
             if item['content_type'] == 'Note':
                 note = item['content']
-                text = note['text'] + '\n'
-                count = 0 # used to remove title duplicates
+                text = note['text']
 
+                # Add a new line so it outputs pretty
+                if not text.endswith('\n'):
+                    text += '\n';
+
+                text = text.encode() # convert to binary data
+
+                # remove title duplicates by adding a number to the end
+                count = 0
                 while True:
                     title = note['title'] + ('' if not count else ' ' + str(count + 1))
                     if title in notes:
@@ -66,7 +73,7 @@ class ItemManager:
 
     def writeNote(self, uuid, text):
         item = self.items[uuid]
-        item['content']['text'] = text.strip()
+        item['content']['text'] = text.decode() # convert back to string
         item['dirty'] = True
 
     def createNote(self, name, time):

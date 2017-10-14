@@ -2,6 +2,9 @@ import json, requests, time
 
 from crypt import EncryptionHelper
 
+class SNAPIException(Exception):
+    pass
+
 class RESTAPI:
     def __init__(self, base_url):
         self.base_url = base_url
@@ -27,11 +30,19 @@ class StandardNotesAPI:
 
     def genKeys(self, password):
         pw_info = self.getAuthParamsForEmail()
+
+        if 'error' in pw_info:
+            raise SNAPIException(pw_info['error']['message'])
+
         return self.encryption_helper.pure_generatePasswordAndKey(password, pw_info['pw_salt'], pw_info['pw_cost'])
 
     def signIn(self, keys):
         self.keys = keys
         res = self.api.post('/auth/sign_in', dict(email=self.username, password=self.keys['pw']))
+
+        if 'error' in res:
+            raise SNAPIException(res['error']['message'])
+
         self.api.addHeader(dict(Authorization='Bearer ' + res['token']))
 
     def sync(self, dirty_items):
