@@ -124,9 +124,9 @@ class EncryptionHelper:
         string_to_auth = ':'.join([version, uuid, IV, ciphertext])
         local_auth_hash = hmac.new(
                 unhexlify(auth_key), string_to_auth.encode(), 'sha256').digest()
-        local_auth_hash = hexlify(local_auth_hash).decode()
 
-        if local_auth_hash != auth_hash:
+        auth_hash = unhexlify(auth_hash)
+        if not hmac.compare_digest(local_auth_hash, auth_hash):
             print('Auth hash does not match. This could indicate tampering or '
                   'that something is wrong with the server. Exiting.')
             sys.exit(1)
