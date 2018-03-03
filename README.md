@@ -69,7 +69,7 @@ optional arguments:
 ### For Debian/Ubuntu-based systems
 Install dependencies:
 ```text
-$ sudo apt-get install fuse python3 python3-pip python3-virtualenv
+$ sudo apt-get install fuse python3 python3-pip virtualenv python3-virtualenv
 ```
 
 Clone the repo and install Python Dependencies:
