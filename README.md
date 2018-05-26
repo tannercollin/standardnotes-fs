@@ -15,19 +15,19 @@ Please enter your password (hidden):
 
 (env) $ tree ~/notes
 /home/tanner/notes
-├── Accounts
-├── Books
-├── Checklists
-├── Invention Ideas
-├── News Notes
-├── Shopping
-├── standardnotes-fs
-├── Todo
-└── Wifi
+├── Accounts.txt
+├── Books.txt
+├── Checklists.txt
+├── Invention Ideas.txt
+├── News Notes.txt
+├── Shopping.txt
+├── standardnotes-fs.txt
+├── Todo.txt
+└── Wifi.txt
 
 0 directories, 31 files
 
-(env) $ cat ~/notes/Todo 
+(env) $ cat ~/notes/Todo.txt
 V Get groceries
 V Laundry
 X Replace kitchen light
@@ -106,6 +106,7 @@ $
 * Filesystem functions currently supported: getattr, readdir, read, truncate, write, create, unlink, utimens, and rename.
 * Creating hidden files (names beginning with a period) is disabled to prevent junk file creation.
 * Notes with identical names are deduplicated by adding a number to the end.
+* On the filesystem, notes will have the '.txt' extension appended to their name
 
 ## License
 This program is free and open-source software licensed under the GNU GPLv3. Please see the `LICENSE` file for details.

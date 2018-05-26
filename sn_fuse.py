@@ -120,6 +120,9 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
             logging.error('Creation of hidden files is disabled.')
             raise FuseOSError(errno.EPERM)
 
+        if note_name.endswith('.txt'):
+            notename = notename[:-3]
+
         now = datetime.utcnow().isoformat()[:-3] + 'Z' # hack
 
         self.item_manager.create_note(note_name, now)
@@ -151,8 +154,11 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
         return 0
 
     def chmod(self, path, mode):
-        logging.error('chmod is disabled.')
-        raise FuseOSError(errno.EPERM)
+        if mode == self.note_stat['st_mode']:
+            return 0
+        else:
+            logging.error('chmod is disabled.')
+            raise FuseOSError(errno.EPERM)
 
     def chown(self, path, uid, gid):
         logging.error('chown is disabled.')
