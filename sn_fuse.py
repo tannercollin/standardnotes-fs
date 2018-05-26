@@ -121,7 +121,7 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
             raise FuseOSError(errno.EPERM)
 
         if note_name.endswith('.txt'):
-            notename = notename[:-3]
+            note_name = note_name[:-4]
 
         now = datetime.utcnow().isoformat()[:-3] + 'Z' # hack
 
