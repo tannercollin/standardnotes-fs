@@ -120,9 +120,12 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
             logging.error('Creation of hidden files is disabled.')
             raise FuseOSError(errno.EPERM)
 
-        if note_name.endswith('.txt'):
-            note_name = note_name[:-4]
+        # makes sure writing / stat operations are consistent
+        if not note_name.endswith('.txt'):
+            logging.error('New notes must end in .txt')
+            raise FuseOSError(errno.EPERM)
 
+        note_name = note_name[:-4]
         now = datetime.utcnow().isoformat()[:-3] + 'Z' # hack
 
         self.item_manager.create_note(note_name, now)
