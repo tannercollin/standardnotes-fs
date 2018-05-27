@@ -54,7 +54,7 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
             try:
                 self.item_manager.sync_items()
             except ConnectionError:
-                logging.error('Unable to connect to sync server. Retrying...')
+                logging.error('Unable to connect to sync server.')
 
     def _sync_now(self):
         self.run_sync.set()
