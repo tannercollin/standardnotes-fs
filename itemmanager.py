@@ -64,9 +64,9 @@ class ItemManager:
                     else:
                         break
 
-                title += '.txt'
+                note_name = title + '.txt'
 
-                notes[title] = dict(
+                notes[note_name] = dict(note_name=note_name,
                         text=text, created=item['created_at'],
                         modified=item.get('updated_at', item['created_at']),
                         uuid=item['uuid'])

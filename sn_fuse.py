@@ -16,7 +16,10 @@ from itemmanager import ItemManager
 class StandardNotesFUSE(LoggingMixIn, Operations):
     def __init__(self, sn_api, sync_sec, path='.'):
         self.item_manager = ItemManager(sn_api)
-        self.notes = self.item_manager.get_notes()
+        self.notes = {}
+        self.mtimes = {}
+
+        self.update_mtimes()
 
         self.uid = os.getuid()
         self.gid = os.getgid()
@@ -39,7 +42,7 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
         self.sync_thread.start()
 
     def destroy(self, path):
-        self._sync_now()
+        self.run_sync.set()
         logging.info('Stopping sync thread.')
         self.stop_sync.set()
         self.sync_thread.join()
@@ -53,10 +56,28 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
             sleep(0.1) # fixes race condition of quick create() then write()
             try:
                 self.item_manager.sync_items()
+                self.update_mtimes()
             except ConnectionError:
                 logging.error('Unable to connect to sync server.')
 
-    def _sync_now(self):
+    def update_mtimes(self):
+        self.notes = self.item_manager.get_notes()
+        for note_name, note in self.notes.items():
+            mtime = self.mtimes.get(note_name, None)
+            modified = iso8601.parse_date(note['modified']).timestamp()
+
+            if mtime:
+                if mtime['server']:
+                    if modified > mtime['server']:
+                        self.mtimes[note_name]['local'] = modified
+                        self.mtimes[note_name]['server'] = modified
+                else:
+                    self.mtimes[note_name]['server'] = modified
+            else:
+                self.mtimes[note_name] = dict(local=modified, server=modified)
+
+    def _modify_sync(self, note_name):
+        self.mtimes[note_name] = dict(local=datetime.now().timestamp(), server=None)
         self.run_sync.set()
 
     def _path_to_note(self, path):
@@ -64,18 +85,18 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
         note_name = pp.parts[1]
         self.notes = self.item_manager.get_notes()
         note = self.notes[note_name]
-        return note, note['uuid']
+        return note, note_name, note['uuid']
 
     def getattr(self, path, fh=None):
         if path == '/':
             return self.dir_stat
 
         try:
-            note, uuid = self._path_to_note(path)
+            note, note_name, uuid = self._path_to_note(path)
             st = self.note_stat
             st['st_size'] = len(note['text'])
             st['st_ctime'] = iso8601.parse_date(note['created']).timestamp()
-            st['st_mtime'] = iso8601.parse_date(note['modified']).timestamp()
+            st['st_mtime'] = self.mtimes[note_name]['local']
             return st
         except KeyError:
             raise FuseOSError(errno.ENOENT)
@@ -84,22 +105,23 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
         dirents = ['.', '..']
 
         if path == '/':
+            self.notes = self.item_manager.get_notes()
             dirents.extend(list(self.notes.keys()))
         return dirents
 
     def read(self, path, size, offset, fh):
-        note, uuid = self._path_to_note(path)
+        note, note_name, uuid = self._path_to_note(path)
         return note['text'][offset : offset + size]
 
     def truncate(self, path, length, fh=None):
-        note, uuid = self._path_to_note(path)
+        note, note_name, uuid = self._path_to_note(path)
         text = note['text'][:length]
         self.item_manager.write_note(uuid, text)
-        self._sync_now()
+        self._modify_sync(note_name)
         return 0
 
     def write(self, path, data, offset, fh):
-        note, uuid = self._path_to_note(path)
+        note, note_name, uuid = self._path_to_note(path)
         text = note['text'][:offset] + data
 
         try:
@@ -108,7 +130,7 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
             logging.error('Unable to parse non-unicode data.')
             raise FuseOSError(errno.EIO)
 
-        self._sync_now()
+        self._modify_sync(note_name)
         return len(data)
 
     def create(self, path, mode):
@@ -125,17 +147,18 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
             logging.error('New notes must end in .txt')
             raise FuseOSError(errno.EPERM)
 
-        note_name = note_name[:-4]
+        title = note_name[:-4]
         now = datetime.utcnow().isoformat()[:-3] + 'Z' # hack
 
-        self.item_manager.create_note(note_name, now)
-        self._sync_now()
+        self.item_manager.create_note(title, now)
+        self._modify_sync(note_name)
         return 0
 
     def unlink(self, path):
-        note, uuid = self._path_to_note(path)
+        note, note_name, uuid = self._path_to_note(path)
         self.item_manager.delete_note(uuid)
-        self._sync_now()
+        self._modify_sync(note_name)
+        self.mtimes.pop(note_name)
         return 0
 
     def mkdir(self, path, mode):
@@ -143,17 +166,18 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
         raise FuseOSError(errno.EPERM)
 
     def utimens(self, path, times=None):
-        note, uuid = self._path_to_note(path)
+        note, note_name, uuid = self._path_to_note(path)
         self.item_manager.touch_note(uuid)
-        self._sync_now()
+        self._modify_sync(note_name)
         return 0
 
     def rename(self, old, new):
-        note, uuid = self._path_to_note(old)
+        note, note_name, uuid = self._path_to_note(old)
         new_path_parts = new.split('/')
         new_note_name = new_path_parts[1]
         self.item_manager.rename_note(uuid, new_note_name)
-        self._sync_now()
+        self._modify_sync(new_note_name)
+        self.mtimes.pop(note_name)
         return 0
 
     def chmod(self, path, mode):
