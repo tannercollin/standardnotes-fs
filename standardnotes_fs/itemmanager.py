@@ -1,6 +1,6 @@
 from uuid import uuid1
 
-from api import StandardNotesAPI
+from standardnotes_fs.api import StandardNotesAPI
 
 class ItemManager:
     items = {}

@@ -8,12 +8,13 @@ This allows you to edit your notes in your favorite text editor, use standard \*
 This is an _unofficial_ Standard Notes client.
 
 ## Example
+
 ```text
-(env) $ python standardnotes_fs.py ~/notes
+$ snfs ~/notes
 Please enter your Standard Notes username: tanner@example.com
 Please enter your password (hidden): 
 
-(env) $ tree ~/notes
+$ tree ~/notes
 /home/tanner/notes
 ├── Accounts.txt
 ├── Books.txt
@@ -24,25 +25,38 @@ Please enter your password (hidden):
 ├── standardnotes-fs.txt
 ├── Todo.txt
 └── Wifi.txt
-
 0 directories, 31 files
 
-(env) $ cat ~/notes/Todo.txt
+$ cat ~/notes/Todo.txt
 V Get groceries
 V Laundry
 X Replace kitchen light
 O Write standardnotes-fs readme
 O Release standardnotes-fs
 
-(env) $ fusermount -u ~/notes
+$ vim ~/notes/Shopping.txt
+
+$ rsync -Wa ~/notes/ ~/notes_backup/
 ```
+
+### When finished
+
+Unmount the directory:
+```text
+$ fusermount -u ~/notes
+```
+
+Logout to switch accounts (optional):
+```text
+$ snfs --logout
+```
+
 ## Usage
 ```text
-usage: standardnotes_fs.py [-h] [--username USERNAME] [--password PASSWORD]
-                           [-v] [--foreground] [--sync-sec SYNC_SEC]
-                           [--sync-url SYNC_URL] [--no-config-file]
-                           [--config CONFIG] [--logout]
-                           [mountpoint]
+usage: snfs [-h] [--username USERNAME] [--password PASSWORD] [-v]
+            [--foreground] [--sync-sec SYNC_SEC] [--sync-url SYNC_URL]
+            [--no-config-file] [--config CONFIG] [--logout]
+            [mountpoint]
 
 positional arguments:
   mountpoint           local mountpoint folder
@@ -66,37 +80,51 @@ optional arguments:
 ```
 
 ## Installation
-### For Debian/Ubuntu-based systems
+### For Debian/Ubuntu based systems
+
 Install dependencies:
 ```text
-$ sudo apt-get install fuse python3 python3-pip virtualenv python3-virtualenv
+$ sudo apt-get install fuse python3 python3-pip
 ```
 
-Clone the repo and install Python Dependencies:
+#### With Sudo
+
+Install standardnotes-fs and login:
 ```text
-$ git clone https://github.com/tannercollin/standardnotes-fs.git
-$ cd standardnotes-fs/
-$ virtualenv -p python3 env
-$ . env/bin/activate
-(env) $ pip install -r requirements.txt
-(env) $ deactivate
-$
+$ sudo pip install standardnotes-fs
+$ snfs ~/notes
+Please enter your Standard Notes username: tanner@example.com
+Please enter your password (hidden): 
 ```
 
-Run standardnotes-fs:
+#### Without Sudo
+
+Install standardnotes-fs and login:
 ```text
-$ mkdir ~/notes
-$ . env/bin/activate
-(env) $ python standardnotes_fs.py ~/notes
-(env) $
+$ pip install --user standardnotes-fs
+$ python -m snfs ~/notes
+Please enter your Standard Notes username: tanner@example.com
+Please enter your password (hidden): 
 ```
 
-When you are finished, unmount:
+Note: if you don't want to use the `python -m` prefix, you'll need to add python's local bin directory to your `$PATH`.
+
+### For OS X systems
+
+Install dependencies:
+https://osxfuse.github.io/
 ```text
-(env) $ fusermount -u ~/notes
-(env) $ deactivate
-$
+$ brew install python3
 ```
+
+Install standardnotes-fs and login:
+```text
+$ pip install standardnotes-fs
+$ snfs ~/notes
+Please enter your Standard Notes username: tanner@example.com
+Please enter your password (hidden): 
+```
+
 ## Notes
 * Important: standardnotes-fs has not been tested vigorously yet. Before you use it, please make a backup of your notes by selecting `Account > Download Data Archive` in the official Standard Notes client.
 * Your account password is not stored and the Python variable is deleted after your encryption keys are generated with it.
@@ -114,4 +142,4 @@ This program is free and open-source software licensed under the GNU GPLv3. Plea
 That means you have the right to study, change, and distribute the software and source code to anyone and for any purpose as long as you grant the same rights when distributing it. You deserve these rights. Please take advantage of them because I like pull requests and would love to see this code put to use.
 
 ## Acknowledgements
-Thanks to all the devs behind Standard Notes, Python, libfuse and FUSE.
+Thanks to all the devs behind Standard Notes, Udia, Python, libfuse and FUSE.

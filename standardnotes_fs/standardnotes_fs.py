@@ -2,16 +2,16 @@ import argparse
 from configparser import ConfigParser
 from getpass import getpass
 import logging
+import sys
 import os
 import pathlib
-import sys
 
 import appdirs
 from fuse import FUSE
 from requests.exceptions import ConnectionError, MissingSchema
 
-from api import SNAPIException, StandardNotesAPI
-from sn_fuse import StandardNotesFUSE
+from standardnotes_fs.api import SNAPIException, StandardNotesAPI
+from standardnotes_fs.sn_fuse import StandardNotesFUSE
 
 OFFICIAL_SERVER_URL = 'https://sync.standardnotes.org'
 DEFAULT_SYNC_SEC = 30

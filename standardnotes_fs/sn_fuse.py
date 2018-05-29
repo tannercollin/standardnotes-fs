@@ -11,7 +11,7 @@ from fuse import FuseOSError, LoggingMixIn, Operations
 import iso8601
 from requests.exceptions import ConnectionError
 
-from itemmanager import ItemManager
+from standardnotes_fs.itemmanager import ItemManager
 
 class StandardNotesFUSE(LoggingMixIn, Operations):
     def __init__(self, sn_api, sync_sec, path='.'):

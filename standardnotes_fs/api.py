@@ -1,6 +1,6 @@
 import requests
 
-from crypt import EncryptionHelper
+from standardnotes_fs.crypt import EncryptionHelper
 
 class SNAPIException(Exception):
     pass
