@@ -58,15 +58,13 @@ class ItemManager:
                 count = 0
                 while True:
                     title = note['title'] + ('' if not count else
-                                             ' ' + str(count + 1))
+                                             ' ' + str(count + 1)) + '.txt'
                     if title in notes:
                         count += 1
                     else:
                         break
 
-                note_name = title + '.txt'
-
-                notes[note_name] = dict(note_name=note_name,
+                notes[title] = dict(note_name=title,
                         text=text, created=item['created_at'],
                         modified=item.get('updated_at', item['created_at']),
                         uuid=item['uuid'])
