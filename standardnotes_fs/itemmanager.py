@@ -57,8 +57,11 @@ class ItemManager:
                 # remove title duplicates by adding a number to the end
                 count = 0
                 while True:
-                    title = note['title'] + ('' if not count else
-                                             ' ' + str(count + 1)) + '.txt'
+                    title = note['title'] + ('' if not count else str(count + 1))
+
+                    # clean up filenames
+                    title = title.replace('/', '-').replace(' ', '_') + '.txt'
+
                     if title in notes:
                         count += 1
                     else:
