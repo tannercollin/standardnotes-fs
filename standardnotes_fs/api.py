@@ -34,8 +34,25 @@ class StandardNotesAPI:
         if 'error' in pw_info:
             raise SNAPIException(pw_info['error']['message'])
 
+        email = pw_info['identifier']
+        version = pw_info['version']
+        pw_cost = pw_info['pw_cost']
+        pw_nonce = pw_info['pw_nonce']
+
+        if version == '001':
+            print('Old authentication protocol detected. This version is not '
+                  'supported by standardnotes-fs. Please resync all of '
+                  'your notes by following the instructions here:\n'
+                  'https://standardnotes.org/help/resync')
+            sys.exit(1)
+        elif version == '002':
+            pw_salt = pw_info['pw_salt']
+        elif version == '003':
+            pw_salt = self.encryption_helper.pure_generate_salt_from_nonce(
+                email, version, str(pw_cost), pw_nonce)
+
         return self.encryption_helper.pure_generate_password_and_key(
-                password, pw_info['pw_salt'], pw_info['pw_cost'])
+                password, pw_salt, pw_cost)
 
     def sign_in(self, keys):
         self.keys = keys

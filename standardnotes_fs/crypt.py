@@ -19,6 +19,13 @@ AES_IV_LEN = 128
 AES_STR_IV_LEN = AES_IV_LEN // BITS_PER_HEX_DIGIT
 
 class EncryptionHelper:
+    def pure_generate_salt_from_nonce(self, email, version, pw_cost, pw_nonce):
+        string_to_hash = ':'.join([email, 'SF', version, pw_cost, pw_nonce])
+        output = hashlib.sha256(string_to_hash.encode())
+        output = output.hexdigest()
+
+        return output
+
     def pure_generate_password_and_key(self, password, pw_salt, pw_cost):
         output = hashlib.pbkdf2_hmac(
                 'sha512', password.encode(), pw_salt.encode(), pw_cost,
@@ -51,35 +58,36 @@ class EncryptionHelper:
         item_ak = item_key[AES_STR_KEY_LEN:]
 
         enc_item = deepcopy(item)
-        enc_item['content'] = self.pure_encrypt_string_002(
+        enc_item['content'] = self.pure_encrypt_string_003(
                 content, item_ek, item_ak, uuid)
-        enc_item['enc_item_key'] = self.pure_encrypt_string_002(
+        enc_item['enc_item_key'] = self.pure_encrypt_string_003(
                 item_key, keys['mk'], keys['ak'], uuid)
 
         return enc_item
 
     def pure_decrypt_item(self, item, keys):
-        if item['deleted']:
+        if item['deleted'] or item['content_type'] == 'SN|UserPreferences':
             return item
 
         uuid = item['uuid']
         content = item['content']
         enc_item_key = item['enc_item_key']
+        version = content[:3]
 
-        if content[:3] == '001':
+        if version == '001' or version == '002':
             print('Old encryption protocol detected. This version is not '
                   'supported by standardnotes-fs. Please resync all of '
                   'your notes by following the instructions here:\n'
                   'https://standardnotes.org/help/resync')
             sys.exit(1)
-        elif content[:3] == '002':
-            item_key = self.pure_decrypt_string_002(
+        elif version == '003':
+            item_key = self.pure_decrypt_string_003(
                     enc_item_key, keys['mk'], keys['ak'], uuid)
             item_key_length = len(item_key)
             item_ek = item_key[:item_key_length//2]
             item_ak = item_key[item_key_length//2:]
 
-            dec_content = self.pure_decrypt_string_002(
+            dec_content = self.pure_decrypt_string_003(
                     content, item_ek, item_ak, uuid)
         else:
             print('Invalid protocol version. This could indicate tampering or '
@@ -91,7 +99,7 @@ class EncryptionHelper:
 
         return dec_item
 
-    def pure_encrypt_string_002(self, string_to_encrypt, encryption_key,
+    def pure_encrypt_string_003(self, string_to_encrypt, encryption_key,
                                 auth_key, uuid):
         IV = hex(random.getrandbits(AES_IV_LEN))
         IV = IV[2:].rjust(AES_STR_IV_LEN, '0') # remove '0x', pad with 0's
@@ -102,16 +110,16 @@ class EncryptionHelper:
         padded_pt = pt + pad * bytes([pad])
         ciphertext = b64encode(cipher.encrypt(padded_pt)).decode()
 
-        string_to_auth = ':'.join(['002', uuid, IV, ciphertext])
+        string_to_auth = ':'.join(['003', uuid, IV, ciphertext])
         auth_hash = hmac.new(
                 unhexlify(auth_key), string_to_auth.encode(), 'sha256').digest()
         auth_hash = hexlify(auth_hash).decode()
 
-        result = ':'.join(['002', auth_hash, uuid, IV, ciphertext])
+        result = ':'.join(['003', auth_hash, uuid, IV, ciphertext])
 
         return result
 
-    def pure_decrypt_string_002(self, string_to_decrypt, encryption_key,
+    def pure_decrypt_string_003(self, string_to_decrypt, encryption_key,
                                 auth_key, uuid):
         components = string_to_decrypt.split(':')
         version, auth_hash, local_uuid, IV, ciphertext = components
