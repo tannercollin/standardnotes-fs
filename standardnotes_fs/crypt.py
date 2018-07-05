@@ -66,7 +66,7 @@ class EncryptionHelper:
         return enc_item
 
     def pure_decrypt_item(self, item, keys):
-        if item['deleted'] or item['content_type'] == 'SN|UserPreferences':
+        if item['deleted']:
             return item
 
         uuid = item['uuid']

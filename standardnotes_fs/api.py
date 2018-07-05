@@ -2,6 +2,8 @@ import requests
 
 from standardnotes_fs.crypt import EncryptionHelper
 
+ALLOWED_ITEM_TYPES = ['Note']
+
 class SNAPIException(Exception):
     pass
 
@@ -76,8 +78,10 @@ class StandardNotesAPI:
         return items
 
     def handle_response_items(self, response):
+        valid_items = [item for item in response['retrieved_items']
+            if item['content_type'] in ALLOWED_ITEM_TYPES]
         response_items = self.encryption_helper.decrypt_response_items(
-                response['retrieved_items'], self.keys)
+                valid_items, self.keys)
         saved_items = self.encryption_helper.decrypt_response_items(
                 response['saved_items'], self.keys)
         return dict(response_items=response_items, saved_items=saved_items)
