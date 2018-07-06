@@ -40,37 +40,36 @@ class ItemManager:
 
     def get_notes(self):
         notes = {}
-        sorted_items = sorted(
-                self.items.items(), key=lambda x: x[1]['created_at'])
+        note_items = [item for uuid, item in self.items.items()
+                if item['content_type'] == 'Note']
+        sorted_note_items = sorted(note_items, key=lambda x: x['created_at'])
 
-        for uuid, item in sorted_items:
-            if item['content_type'] == 'Note':
-                note = item['content']
-                text = note['text']
+        for item in sorted_note_items:
+            note = item['content']
+            text = note['text']
 
-                # Add a new line so it outputs pretty
-                if not text.endswith('\n'):
-                    text += '\n';
+            # Add a new line so it outputs pretty
+            if not text.endswith('\n'):
+                text += '\n';
 
-                text = text.encode() # convert to binary data
+            text = text.encode() # convert to binary data
 
-                # remove title duplicates by adding a number to the end
-                count = 0
-                while True:
-                    title = note['title'] + ('' if not count else str(count + 1))
+            # remove title duplicates by adding a number to the end
+            count = 0
+            while True:
+                title = note['title'] + ('' if not count else str(count + 1))
 
-                    # clean up filenames
-                    title = title.replace('/', '-').replace(' ', '_') + '.txt'
+                # clean up filenames
+                title = title.replace('/', '-').replace(' ', '_') + '.txt'
 
-                    if title in notes:
-                        count += 1
-                    else:
-                        break
+                if title in notes:
+                    count += 1
+                else:
+                    break
 
-                notes[title] = dict(note_name=title,
-                        text=text, created=item['created_at'],
-                        modified=item.get('updated_at', item['created_at']),
-                        uuid=item['uuid'])
+            notes[title] = dict(note_name=title, text=text, uuid=item['uuid'],
+                    created=item['created_at'],
+                    modified=item.get('updated_at', item['created_at']))
         return notes
 
     def touch_note(self, uuid):
@@ -98,6 +97,37 @@ class ItemManager:
         item = self.items[uuid]
         item['deleted'] = True
         item['dirty'] = True
+
+    def get_tags(self):
+        tags = {}
+        tag_items = [item for uuid, item in self.items.items()
+                if item['content_type'] == 'Tag']
+        sorted_tag_items = sorted(tag_items, key=lambda x: x['created_at'])
+
+        for item in sorted_tag_items:
+            tag = item['content']
+            references = tag['references']
+
+            notes = [r['uuid'] for r in references if r['content_type'] == 'Note']
+
+            # remove title duplicates by adding a number to the end
+            count = 0
+            while True:
+                title = tag['title'] + ('' if not count else str(count + 1))
+
+                # clean up filenames
+                title = title.replace('/', '-').replace(' ', '_')
+
+                if title in tags:
+                    count += 1
+                else:
+                    break
+
+            tags[title] = dict(tag_name=title, notes=notes, uuid=item['uuid'],
+                    created=item['created_at'],
+                    modified=item.get('updated_at', item['created_at']))
+
+        return tags
 
     def __init__(self, sn_api):
         self.sn_api = sn_api

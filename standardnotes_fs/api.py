@@ -2,7 +2,7 @@ import requests
 
 from standardnotes_fs.crypt import EncryptionHelper
 
-ALLOWED_ITEM_TYPES = ['Note']
+ALLOWED_ITEM_TYPES = ['Note', 'Tag']
 
 class SNAPIException(Exception):
     pass

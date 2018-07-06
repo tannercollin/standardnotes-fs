@@ -16,6 +16,7 @@ from standardnotes_fs.itemmanager import ItemManager
 class StandardNotesFUSE(LoggingMixIn, Operations):
     def __init__(self, sn_api, sync_sec, path='.'):
         self.item_manager = ItemManager(sn_api)
+        self.tags = self.item_manager.get_tags()
         self.notes = {}
         self.mtimes = {}
 
@@ -80,33 +81,66 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
         self.mtimes[note_name] = dict(local=datetime.now().timestamp(), server=None)
         self.run_sync.set()
 
+    def _pp_to_tag(self, pp):
+        tag_name = pp.name
+        self.tags = self.item_manager.get_tags()
+        tag = self.tags[tag_name]
+        return tag
+
     def _path_to_note(self, path):
         pp = PurePath(path)
-        note_name = pp.parts[1]
+        note_name = pp.name
         self.notes = self.item_manager.get_notes()
         note = self.notes[note_name]
         return note, note_name, note['uuid']
 
     def getattr(self, path, fh=None):
-        if path == '/':
-            return self.dir_stat
+        pp = PurePath(path)
 
         try:
-            note, note_name, uuid = self._path_to_note(path)
-            st = self.note_stat
-            st['st_size'] = len(note['text'])
-            st['st_ctime'] = iso8601.parse_date(note['created']).timestamp()
-            st['st_mtime'] = self.mtimes[note_name]['local']
-            return st
+            if path == '/':
+                st = dict(self.dir_stat, st_size=len(self.notes))
+            elif pp.parts[1] == 'tags':
+                if len(pp.parts) == 3:
+                    tag = self._pp_to_tag(pp)
+                    st = self.dir_stat
+                    st['st_size'] = len(tag['notes'])
+                    st['st_ctime'] = iso8601.parse_date(tag['created']).timestamp()
+                    st['st_mtime'] = iso8601.parse_date(tag['modified']).timestamp()
+                elif len(pp.parts) == 4:
+                    st = self.getattr('/' + pp.name) # recursion
+                else:
+                    st = dict(self.dir_stat, st_size=len(self.tags))
+            else:
+                note, note_name, uuid = self._path_to_note(path)
+                st = self.note_stat
+                st['st_size'] = len(note['text'])
+                st['st_ctime'] = iso8601.parse_date(note['created']).timestamp()
+                st['st_mtime'] = self.mtimes[note_name]['local']
         except KeyError:
             raise FuseOSError(errno.ENOENT)
 
+        return st
+
     def readdir(self, path, fh):
         dirents = ['.', '..']
+        pp = PurePath(path)
 
         if path == '/':
             self.notes = self.item_manager.get_notes()
             dirents.extend(list(self.notes.keys()))
+            dirents.append('tags')
+        elif pp.parts[1] == 'tags':
+            if len(pp.parts) == 3:
+                tag = self._pp_to_tag(pp)
+                self.notes = self.item_manager.get_notes()
+                note_names = [note_name for note_name, note in self.notes.items()
+                        if note['uuid'] in tag['notes']]
+                dirents.extend(note_names)
+            else:
+                self.tags = self.item_manager.get_tags()
+                dirents.extend(list(self.tags.keys()))
+
         return dirents
 
     def read(self, path, size, offset, fh):
@@ -134,8 +168,12 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
         return len(data)
 
     def create(self, path, mode):
-        path_parts = path.split('/')
-        note_name = path_parts[1]
+        pp = PurePath(path)
+        note_name = pp.name
+
+        if pp.parts[1] == 'tags':
+            logging.error('Unable to create files in tags directory.')
+            raise FuseOSError(errno.EPERM)
 
         # disallow hidden files (usually editor / OS files)
         if note_name[0] == '.':
@@ -143,11 +181,11 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
             raise FuseOSError(errno.EPERM)
 
         # makes sure writing / stat operations are consistent
-        if not note_name.endswith('.txt'):
-            logging.error('New notes must end in .txt')
+        if pp.suffix != '.txt':
+            logging.error('New notes must end in .txt.')
             raise FuseOSError(errno.EPERM)
 
-        title = note_name[:-4]
+        title = pp.stem
         now = datetime.utcnow().isoformat()[:-3] + 'Z' # hack
 
         self.item_manager.create_note(title, now)
@@ -155,6 +193,12 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
         return 0
 
     def unlink(self, path):
+        pp = PurePath(path)
+
+        if pp.parts[1] == 'tags':
+            logging.error('Untagging not yet supported.')
+            raise FuseOSError(errno.EPERM)
+
         note, note_name, uuid = self._path_to_note(path)
         self.item_manager.delete_note(uuid)
         self._modify_sync(note_name)
@@ -166,17 +210,27 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
         raise FuseOSError(errno.EPERM)
 
     def utimens(self, path, times=None):
+        pp = PurePath(path)
+
+        if pp.parts[1] == 'tags':
+            logging.error('Touching tags not yet supported.')
+            raise FuseOSError(errno.EPERM)
+
         note, note_name, uuid = self._path_to_note(path)
         self.item_manager.touch_note(uuid)
         self._modify_sync(note_name)
         return 0
 
     def rename(self, old, new):
+        pp = PurePath(new)
+
+        if pp.parts[1] == 'tags':
+            logging.error('Tagging not yet supported.')
+            raise FuseOSError(errno.EPERM)
+
         note, note_name, uuid = self._path_to_note(old)
-        new_path_parts = new.split('/')
-        new_note_name = new_path_parts[1]
-        self.item_manager.rename_note(uuid, new_note_name)
-        self._modify_sync(new_note_name)
+        self.item_manager.rename_note(uuid, pp.stem)
+        self._modify_sync(pp.name)
         self.mtimes.pop(note_name)
         return 0
 
@@ -195,7 +249,8 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
         return 0
 
     def rmdir(self, path):
-        return 0
+        logging.error('Deleting tags not yet supported.')
+        raise FuseOSError(errno.EPERM)
 
     def symlink(self, target, source):
         return 0
