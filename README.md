@@ -14,8 +14,14 @@ $ snfs ~/notes
 Please enter your Standard Notes username: tanner@example.com
 Please enter your password (hidden): 
 
-$ tree ~/notes
+$ tree --dirsfirst ~/notes
 /home/tanner/notes
+├── tags
+│   ├── lists
+│   │   ├── Shopping.txt
+│   │   └── Todo.txt
+│   └── projects
+│       └── standardnotes-fs.txt
 ├── Accounts.txt
 ├── Books.txt
 ├── Checklists.txt
@@ -25,7 +31,7 @@ $ tree ~/notes
 ├── standardnotes-fs.txt
 ├── Todo.txt
 └── Wifi.txt
-0 directories, 31 files
+3 directories, 12 files
 
 $ cat ~/notes/Todo.txt
 V Get groceries
@@ -35,6 +41,7 @@ O Write standardnotes-fs readme
 O Release standardnotes-fs
 
 $ vim ~/notes/Shopping.txt
+$ vim ~/notes/tags/lists/Todo.txt
 
 $ rsync -Wa ~/notes/ ~/notes_backup/
 ```
