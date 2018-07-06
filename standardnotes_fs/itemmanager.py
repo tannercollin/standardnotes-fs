@@ -54,10 +54,14 @@ class ItemManager:
 
             text = text.encode() # convert to binary data
 
+            original_title = note.get('title', '')
+            if not original_title:
+                original_title = 'Untitled'
+
             # remove title duplicates by adding a number to the end
             count = 0
             while True:
-                title = note['title'] + ('' if not count else str(count + 1))
+                title = original_title + ('' if not count else str(count + 1))
 
                 # clean up filenames
                 title = title.replace('/', '-').replace(' ', '_') + '.txt'
