@@ -1,4 +1,5 @@
 import requests
+import sys
 
 from standardnotes_fs.crypt import EncryptionHelper
 
