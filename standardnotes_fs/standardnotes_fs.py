@@ -97,13 +97,16 @@ def main():
     # load config file settings
     if not args.no_config_file:
         try:
-            config_file.parent.mkdir(mode=0o0700, parents=True, exist_ok=True)
-            log_msg = 'Using config directory "%s".'
-            logging.info(log_msg % str(config_file.parent))
+            config_file.parent.mkdir(mode=0o0700, parents=True)
+        except FileExistsError:
+            pass
         except OSError:
             log_msg = 'Error creating config file directory "%s".'
             print(log_msg % str(config_file.parent))
             sys.exit(1)
+        finally:
+            log_msg = 'Using config directory "%s".'
+            logging.info(log_msg % str(config_file.parent))
 
         try:
             with config_file.open() as f:
