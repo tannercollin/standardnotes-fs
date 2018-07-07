@@ -98,7 +98,7 @@ $ sudo apt-get install fuse python3 python3-pip
 
 Install standardnotes-fs and login:
 ```text
-$ sudo pip3 install standardnotes-fs
+$ sudo pip3 install git+https://github.com/tannercollin/standardnotes-fs
 $ snfs ~/notes
 Please enter your Standard Notes username: tanner@example.com
 Please enter your password (hidden): 
@@ -108,7 +108,7 @@ Please enter your password (hidden):
 
 Install standardnotes-fs and login:
 ```text
-$ pip3 install --user standardnotes-fs
+$ pip3 install --user git+https://github.com/tannercollin/standardnotes-fs
 $ python3 -m snfs ~/notes
 Please enter your Standard Notes username: tanner@example.com
 Please enter your password (hidden): 
@@ -119,6 +119,7 @@ Note: if you don't want to use the `python -m` prefix, you'll need to add python
 ### For OS X systems
 
 Install dependencies:
+
 https://osxfuse.github.io/
 ```text
 $ brew install python3
@@ -126,7 +127,7 @@ $ brew install python3
 
 Install standardnotes-fs and login:
 ```text
-$ pip3 install standardnotes-fs
+$ pip3 install git+https://github.com/tannercollin/standardnotes-fs
 $ snfs ~/notes
 Please enter your Standard Notes username: tanner@example.com
 Please enter your password (hidden): 
