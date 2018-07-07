@@ -98,7 +98,7 @@ $ sudo apt-get install fuse python3 python3-pip
 
 Install standardnotes-fs and login:
 ```text
-$ sudo pip install standardnotes-fs
+$ sudo pip3 install standardnotes-fs
 $ snfs ~/notes
 Please enter your Standard Notes username: tanner@example.com
 Please enter your password (hidden): 
@@ -108,8 +108,8 @@ Please enter your password (hidden):
 
 Install standardnotes-fs and login:
 ```text
-$ pip install --user standardnotes-fs
-$ python -m snfs ~/notes
+$ pip3 install --user standardnotes-fs
+$ python3 -m snfs ~/notes
 Please enter your Standard Notes username: tanner@example.com
 Please enter your password (hidden): 
 ```
@@ -126,7 +126,7 @@ $ brew install python3
 
 Install standardnotes-fs and login:
 ```text
-$ pip install standardnotes-fs
+$ pip3 install standardnotes-fs
 $ snfs ~/notes
 Please enter your Standard Notes username: tanner@example.com
 Please enter your password (hidden): 
