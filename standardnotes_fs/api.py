@@ -27,15 +27,27 @@ class RESTAPI:
 class StandardNotesAPI:
     encryption_helper = EncryptionHelper()
     sync_token = None
+    mfa_data = {}
+
+    def check_mfa_error(self, res):
+        if 'error' in res:
+            if 'tag' in res['error'] and res['error']['tag'] == 'mfa-required':
+                mfa_code = input('Enter your two-factor authentication code: ')
+                self.mfa_data = {res['error']['payload']['mfa_key']: mfa_code}
+                return True
+            else:
+                raise SNAPIException(res['error']['message'])
 
     def get_auth_params_for_email(self):
-        return self.api.get('/auth/params', dict(email=self.username))
+        res = self.api.get('/auth/params', dict(email=self.username,
+                                                **self.mfa_data))
+        if self.check_mfa_error(res):
+            return self.get_auth_params_for_email()
+        else:
+            return res
 
     def gen_keys(self, password):
         pw_info = self.get_auth_params_for_email()
-
-        if 'error' in pw_info:
-            raise SNAPIException(pw_info['error']['message'])
 
         email = pw_info['identifier']
         version = pw_info['version']
@@ -60,11 +72,13 @@ class StandardNotesAPI:
     def sign_in(self, keys):
         self.keys = keys
         res = self.api.post('/auth/sign_in', dict(email=self.username,
-                                                  password=self.keys['pw']))
-        if 'error' in res:
-            raise SNAPIException(res['error']['message'])
+                                                  password=self.keys['pw'],
+                                                  **self.mfa_data))
 
-        self.api.add_header(dict(Authorization='Bearer ' + res['token']))
+        if self.check_mfa_error(res):
+            self.sign_in(keys)
+        else:
+            self.api.add_header(dict(Authorization='Bearer ' + res['token']))
 
     def sync(self, dirty_items):
         items = self.handle_dirty_items(dirty_items)
