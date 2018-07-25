@@ -122,7 +122,10 @@ class EncryptionHelper:
     def pure_decrypt_string_003(self, string_to_decrypt, encryption_key,
                                 auth_key, uuid):
         components = string_to_decrypt.split(':')
-        version, auth_hash, local_uuid, IV, ciphertext = components
+        if len(components) == 6:
+            version, auth_hash, local_uuid, IV, ciphertext, auth_params = components
+        else:
+            version, auth_hash, local_uuid, IV, ciphertext = components
 
         if local_uuid != uuid:
             print('UUID does not match. This could indicate tampering or '
