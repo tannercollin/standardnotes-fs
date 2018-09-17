@@ -142,7 +142,7 @@ Please enter your password (hidden):
 * Filesystem functions currently supported: getattr, readdir, read, truncate, write, create, unlink, utimens, and rename.
 * Creating hidden files (names beginning with a period) is disabled to prevent junk file creation.
 * Notes with identical names are deduplicated by adding a number to the end.
-* On the filesystem, notes will have the '.txt' extension appended to their name. '/' is replaced with '-', and ' ' with '_'.
+* On the filesystem, notes will have the '.txt' extension appended to their name. '/' is replaced with '-'.
 
 ## License
 This program is free and open-source software licensed under the GNU GPLv3. Please see the `LICENSE` file for details.
