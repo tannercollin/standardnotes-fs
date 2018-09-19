@@ -64,7 +64,7 @@ class ItemManager:
                 title = original_title + ('' if not count else str(count + 1))
 
                 # clean up filenames
-                title = title.replace('/', '-').replace(' ', '_') + '.txt'
+                title = title.replace('/', '-') + '.txt'
 
                 if title in notes:
                     count += 1
