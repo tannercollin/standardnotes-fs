@@ -80,6 +80,7 @@ optional arguments:
   --sync-sec SYNC_SEC  how many seconds between each sync. Default: 30
   --sync-url SYNC_URL  URL of Standard File sync server. Defaults to:
                        https://sync.standardnotes.org
+  --ext EXT            file extension to add to note titles. Default: .txt
   --no-config-file     don't load or create a config file
   --config CONFIG      specify a config file location. Defaults to:
                        /home/tanner/.config/standardnotes-fs/standardnotes-fs.conf
@@ -142,7 +143,7 @@ Please enter your password (hidden):
 * Filesystem functions currently supported: getattr, readdir, read, truncate, write, create, unlink, utimens, and rename.
 * Creating hidden files (names beginning with a period) is disabled to prevent junk file creation.
 * Notes with identical names are deduplicated by adding a number to the end.
-* On the filesystem, notes will have the '.txt' extension appended to their name. '/' is replaced with '-'.
+* On the filesystem, notes will have the '.txt' extension appended to their name. Change this with the `--ext` argument. Example: `--ext '.md'`.
 
 ## License
 This program is free and open-source software licensed under the GNU GPLv3. Please see the `LICENSE` file for details.

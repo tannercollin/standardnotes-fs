@@ -16,6 +16,7 @@ from standardnotes_fs.sn_fuse import StandardNotesFUSE
 OFFICIAL_SERVER_URL = 'https://sync.standardnotes.org'
 DEFAULT_SYNC_SEC = 30
 MINIMUM_SYNC_SEC = 5
+DEFAULT_EXT = '.txt'
 APP_NAME = 'standardnotes-fs'
 
 # path settings
@@ -43,6 +44,9 @@ def parse_options():
     parser.add_argument('--sync-url',
                         help='URL of Standard File sync server. Defaults to:\n'
                         ''+OFFICIAL_SERVER_URL)
+    parser.add_argument('--ext', default=DEFAULT_EXT,
+                        help='file extension to add to note titles. Default: '
+                        ''+DEFAULT_EXT)
     parser.add_argument('--no-config-file', action='store_true',
                         help='don\'t load or create a config file')
     parser.add_argument('--config', default=CONFIG_FILE,
@@ -179,7 +183,7 @@ def main():
     if login_success:
         logging.info('Starting FUSE filesystem.')
         try:
-            fuse = FUSE(StandardNotesFUSE(sn_api, sync_sec),
+            fuse = FUSE(StandardNotesFUSE(sn_api, sync_sec, args.ext),
                         args.mountpoint,
                         foreground=args.foreground,
                         nothreads=True) # FUSE can't make threads, but we can

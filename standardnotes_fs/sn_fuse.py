@@ -14,8 +14,8 @@ from requests.exceptions import ConnectionError
 from standardnotes_fs.itemmanager import ItemManager
 
 class StandardNotesFUSE(LoggingMixIn, Operations):
-    def __init__(self, sn_api, sync_sec, path='.'):
-        self.item_manager = ItemManager(sn_api)
+    def __init__(self, sn_api, sync_sec, ext, path='.'):
+        self.item_manager = ItemManager(sn_api, ext)
         self.tags = self.item_manager.get_tags()
         self.notes = {}
         self.mtimes = {}

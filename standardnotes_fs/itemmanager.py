@@ -4,6 +4,7 @@ from standardnotes_fs.api import StandardNotesAPI
 
 class ItemManager:
     items = {}
+    ext = ''
 
     def map_items(self, response_items, metadata_only=False):
         DATA_KEYS = ['content', 'enc_item_key', 'auth_hash']
@@ -64,7 +65,7 @@ class ItemManager:
                 title = original_title + ('' if not count else str(count + 1))
 
                 # clean up filenames
-                title = title.replace('/', '-') + '.txt'
+                title = title.replace('/', '-') + self.ext
 
                 if title in notes:
                     count += 1
@@ -133,6 +134,7 @@ class ItemManager:
 
         return tags
 
-    def __init__(self, sn_api):
+    def __init__(self, sn_api, ext):
         self.sn_api = sn_api
+        self.ext = ext
         self.sync_items()
