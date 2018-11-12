@@ -35,6 +35,7 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
                               st_uid=self.uid, st_gid=self.gid)
 
         self.sync_sec = sync_sec
+        self.ext = ext
         self.run_sync = Event()
         self.stop_sync = Event()
         self.sync_thread = Thread(target=self._sync_thread)
@@ -181,8 +182,8 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
             raise FuseOSError(errno.EPERM)
 
         # makes sure writing / stat operations are consistent
-        if pp.suffix != '.txt':
-            logging.error('New notes must end in .txt.')
+        if pp.suffix != self.ext:
+            logging.error('New notes must end in ' + self.ext)
             raise FuseOSError(errno.EPERM)
 
         title = pp.stem
