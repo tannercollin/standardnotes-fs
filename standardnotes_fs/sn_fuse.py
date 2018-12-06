@@ -13,6 +13,9 @@ from requests.exceptions import ConnectionError
 
 from standardnotes_fs.itemmanager import ItemManager
 
+DIR_PERMISSIONS = 0o700
+FILE_PERMISSIONS = 0o600
+
 class StandardNotesFUSE(LoggingMixIn, Operations):
     def __init__(self, sn_api, sync_sec, ext, path='.'):
         self.item_manager = ItemManager(sn_api, ext)
@@ -26,11 +29,11 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
         self.gid = os.getgid()
 
         now = datetime.now().timestamp()
-        self.dir_stat = dict(st_mode=(S_IFDIR | 0o755), st_ctime=now,
+        self.dir_stat = dict(st_mode=(S_IFDIR | DIR_PERMISSIONS), st_ctime=now,
                              st_mtime=now, st_atime=now, st_nlink=2,
                              st_uid=self.uid, st_gid=self.gid)
 
-        self.note_stat = dict(st_mode=(S_IFREG | 0o644), st_ctime=now,
+        self.note_stat = dict(st_mode=(S_IFREG | FILE_PERMISSIONS), st_ctime=now,
                               st_mtime=now, st_atime=now, st_nlink=1,
                               st_uid=self.uid, st_gid=self.gid)
 
@@ -122,6 +125,12 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
             raise FuseOSError(errno.ENOENT)
 
         return st
+
+    def access(self, path, mode):
+        if mode == os.X_OK:
+            raise FuseOSError(errno.EPERM)
+
+        return 0
 
     def readdir(self, path, fh):
         dirents = ['.', '..']
