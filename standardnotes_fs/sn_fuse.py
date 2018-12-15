@@ -128,7 +128,10 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
 
     def access(self, path, mode):
         if mode == os.X_OK:
-            raise FuseOSError(errno.EPERM)
+            if self.getattr(path)['st_mode'] & S_IFREG:
+                raise FuseOSError(errno.EPERM)
+            else:
+                return 0
 
         return 0
 
