@@ -1,3 +1,4 @@
+import io
 import sys
 
 if sys.version_info[0] < 3:
@@ -7,7 +8,7 @@ if sys.version_info[0] < 3:
 
 import setuptools
 
-with open('README.md', 'r') as fh:
+with io.open('README.md', encoding='utf-8') as fh:
     long_description = fh.read()
 
 setuptools.setup(
