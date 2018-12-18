@@ -1,3 +1,4 @@
+from copy import deepcopy
 from uuid import uuid1
 
 from standardnotes_fs.api import StandardNotesAPI
@@ -28,9 +29,9 @@ class ItemManager:
                 self.items[uuid][key] = value
 
     def sync_items(self):
-        dirty_items = [item for uuid, item in self.items.items() if item['dirty']]
+        dirty_items = [deepcopy(item) for _, item in self.items.items() if item['dirty']]
 
-        # remove keys (note: this removes them from self.items as well)
+        # remove keys
         for item in dirty_items:
             item.pop('dirty', None)
             item.pop('updated_at', None)
