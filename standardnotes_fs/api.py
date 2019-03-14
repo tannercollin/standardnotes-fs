@@ -63,10 +63,10 @@ class StandardNotesAPI:
         elif version == '002':
             pw_salt = pw_info['pw_salt']
         elif version == '003':
-            pw_salt = self.encryption_helper.pure_generate_salt_from_nonce(
+            pw_salt = self.encryption_helper.generate_salt_from_nonce(
                 email, version, str(pw_cost), pw_nonce)
 
-        return self.encryption_helper.pure_generate_password_and_key(
+        return self.encryption_helper.generate_password_and_key(
                 password, pw_salt, pw_cost)
 
     def sign_in(self, keys):
