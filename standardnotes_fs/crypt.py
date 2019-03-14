@@ -21,8 +21,7 @@ AES_STR_IV_LEN = AES_IV_LEN // BITS_PER_HEX_DIGIT
 class EncryptionHelper:
     def generate_salt_from_nonce(self, email, version, pw_cost, pw_nonce):
         string_to_hash = ':'.join([email, 'SF', version, pw_cost, pw_nonce])
-        output = hashlib.sha256(string_to_hash.encode())
-        output = output.hexdigest()
+        output = hashlib.sha256(string_to_hash.encode()).hexdigest()
 
         return output
 
@@ -143,7 +142,6 @@ class EncryptionHelper:
 
         cipher = AES.new(unhexlify(encryption_key), AES.MODE_CBC, unhexlify(IV))
         result = cipher.decrypt(b64decode(ciphertext))
-        result = Padding.unpad(result, AES.block_size)
-        result = result.decode()
+        result = Padding.unpad(result, AES.block_size).decode()
 
         return result
