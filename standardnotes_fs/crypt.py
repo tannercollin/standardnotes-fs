@@ -8,12 +8,12 @@ import sys
 
 from Crypto.Cipher import AES
 from Crypto.Random import random
+from Crypto.Util import Padding
 
 BITS_PER_HEX_DIGIT = 4
 
 PASS_KEY_LEN = 96
 AES_KEY_LEN = 256
-AES_BLK_SIZE = 16
 AES_STR_KEY_LEN = AES_KEY_LEN // BITS_PER_HEX_DIGIT
 AES_IV_LEN = 128
 AES_STR_IV_LEN = AES_IV_LEN // BITS_PER_HEX_DIGIT
@@ -106,8 +106,7 @@ class EncryptionHelper:
 
         cipher = AES.new(unhexlify(encryption_key), AES.MODE_CBC, unhexlify(IV))
         pt = string_to_encrypt.encode()
-        pad = AES_BLK_SIZE - len(pt) % AES_BLK_SIZE
-        padded_pt = pt + pad * bytes([pad])
+        padded_pt = Padding.pad(pt, AES.block_size)
         ciphertext = b64encode(cipher.encrypt(padded_pt)).decode()
 
         string_to_auth = ':'.join(['003', uuid, IV, ciphertext])
@@ -144,7 +143,7 @@ class EncryptionHelper:
 
         cipher = AES.new(unhexlify(encryption_key), AES.MODE_CBC, unhexlify(IV))
         result = cipher.decrypt(b64decode(ciphertext))
-        result = result[:-result[-1]] # remove PKCS#7 padding
+        result = Padding.unpad(result, AES.block_size)
         result = result.decode()
 
         return result
