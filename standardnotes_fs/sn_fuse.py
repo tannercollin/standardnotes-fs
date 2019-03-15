@@ -21,9 +21,6 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
         self.item_manager = ItemManager(sn_api, ext)
         self.tags = self.item_manager.get_tags()
         self.notes = {}
-        self.mtimes = {}
-
-        self.update_mtimes()
 
         self.uid = os.getuid()
         self.gid = os.getgid()
@@ -61,28 +58,10 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
             sleep(0.1) # fixes race condition of quick create() then write()
             try:
                 self.item_manager.sync_items()
-                self.update_mtimes()
             except ConnectionError:
                 logging.error('Unable to connect to sync server.')
 
-    def update_mtimes(self):
-        self.notes = self.item_manager.get_notes()
-        for note_name, note in self.notes.items():
-            mtime = self.mtimes.get(note_name, None)
-            modified = iso8601.parse_date(note['modified']).timestamp()
-
-            if mtime:
-                if mtime['server']:
-                    if modified > mtime['server']:
-                        self.mtimes[note_name]['local'] = modified
-                        self.mtimes[note_name]['server'] = modified
-                else:
-                    self.mtimes[note_name]['server'] = modified
-            else:
-                self.mtimes[note_name] = dict(local=modified, server=modified)
-
-    def _modify_sync(self, note_name):
-        self.mtimes[note_name] = dict(local=datetime.now().timestamp(), server=None)
+    def _modify_sync(self):
         self.run_sync.set()
 
     def _pp_to_tag(self, pp):
@@ -120,7 +99,7 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
                 st = self.note_stat
                 st['st_size'] = len(note['text'])
                 st['st_ctime'] = iso8601.parse_date(note['created']).timestamp()
-                st['st_mtime'] = self.mtimes[note_name]['local']
+                st['st_mtime'] = iso8601.parse_date(note['modified']).timestamp()
         except KeyError:
             raise FuseOSError(errno.ENOENT)
 
@@ -164,7 +143,7 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
         note, note_name, uuid = self._path_to_note(path)
         text = note['text'][:length]
         self.item_manager.write_note(uuid, text)
-        self._modify_sync(note_name)
+        self._modify_sync()
         return 0
 
     def write(self, path, data, offset, fh):
@@ -177,7 +156,7 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
             logging.error('Unable to parse non-unicode data.')
             raise FuseOSError(errno.EIO)
 
-        self._modify_sync(note_name)
+        self._modify_sync()
         return len(data)
 
     def create(self, path, mode):
@@ -199,10 +178,9 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
             raise FuseOSError(errno.EPERM)
 
         title = pp.stem
-        now = datetime.utcnow().isoformat()[:-3] + 'Z' # hack
 
-        self.item_manager.create_note(title, now)
-        self._modify_sync(note_name)
+        self.item_manager.create_note(title)
+        self._modify_sync()
         return 0
 
     def unlink(self, path):
@@ -214,8 +192,7 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
 
         note, note_name, uuid = self._path_to_note(path)
         self.item_manager.delete_note(uuid)
-        self._modify_sync(note_name)
-        self.mtimes.pop(note_name)
+        self._modify_sync()
         return 0
 
     def mkdir(self, path, mode):
@@ -231,7 +208,7 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
 
         note, note_name, uuid = self._path_to_note(path)
         self.item_manager.touch_note(uuid)
-        self._modify_sync(note_name)
+        self._modify_sync()
         return 0
 
     def rename(self, old, new):
@@ -243,8 +220,7 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
 
         note, note_name, uuid = self._path_to_note(old)
         self.item_manager.rename_note(uuid, pp.stem)
-        self._modify_sync(pp.name)
-        self.mtimes.pop(note_name)
+        self._modify_sync()
         return 0
 
     def chmod(self, path, mode):

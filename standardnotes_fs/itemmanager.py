@@ -1,3 +1,4 @@
+from datetime import datetime
 from copy import deepcopy
 from uuid import uuid1
 
@@ -40,6 +41,12 @@ class ItemManager:
         self.map_items(response['response_items'])
         self.map_items(response['saved_items'], metadata_only=True)
 
+    def get_updated(self, item):
+        try:
+            return item['content']['appData']['org.standardnotes.sn']['client_updated_at']
+        except KeyError:
+            return item.get('updated_at', item['created_at'])
+
     def get_notes(self):
         notes = {}
         note_items = [item for uuid, item in self.items.items()
@@ -75,34 +82,45 @@ class ItemManager:
 
             notes[title] = dict(note_name=title, text=text, uuid=item['uuid'],
                     created=item['created_at'],
-                    modified=item.get('updated_at', item['created_at']))
+                    modified=self.get_updated(item))
         return notes
+
+    def set_dirty(self, item):
+        item['dirty'] = True
+
+        ref = item['content']
+        ref = ref.setdefault('appData', {})
+        ref = ref.setdefault('org.standardnotes.sn', {})
+        ref['client_updated_at'] = datetime.utcnow().isoformat() + 'Z'
 
     def touch_note(self, uuid):
         item = self.items[uuid]
-        item['dirty'] = True
+        self.set_dirty(item)
 
     def write_note(self, uuid, text):
         item = self.items[uuid]
         item['content']['text'] = text.decode() # convert back to string
-        item['dirty'] = True
+        self.set_dirty(item)
 
-    def create_note(self, name, time):
+    def create_note(self, name):
         uuid = str(uuid1())
         content = dict(title=name, text='', references=[])
-        self.items[uuid] = dict(content_type='Note', dirty=True, auth_hash=None,
-                                uuid=uuid, created_at=time, updated_at=time,
+        creation_time = datetime.utcnow().isoformat() + 'Z'
+        self.items[uuid] = dict(content_type='Note', auth_hash=None,
+                                uuid=uuid, created_at=creation_time,
                                 enc_item_key='', content=content)
+        item = self.items[uuid]
+        self.set_dirty(item)
 
     def rename_note(self, uuid, new_note_name):
         item = self.items[uuid]
         item['content']['title'] = new_note_name
-        item['dirty'] = True
+        self.set_dirty(item)
 
     def delete_note(self, uuid):
         item = self.items[uuid]
         item['deleted'] = True
-        item['dirty'] = True
+        self.set_dirty(item)
 
     def get_tags(self):
         tags = {}
