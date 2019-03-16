@@ -6,28 +6,59 @@ from standardnotes_fs.api import StandardNotesAPI
 
 class ItemManager:
     items = {}
+    note_uuids = {}
+    note_titles = {}
     ext = ''
+
+    def cache_note(self, item):
+        # remove note from caches if it's in there
+        self.note_uuids.pop(self.note_titles.pop(item['uuid'], None), None)
+
+        note = item['content']
+        original_title = note.get('title', 'Untitled')
+
+        # remove title duplicates by adding a number to the end
+        count = 0
+        while True:
+            title = original_title + ('' if not count else str(count + 1))
+
+            # clean up filenames
+            title = title.replace('/', '-') + self.ext
+
+            if title in self.note_uuids:
+                count += 1
+            else:
+                break
+
+        self.note_uuids[title] = item['uuid']
+        self.note_titles[item['uuid']] = title
 
     def map_items(self, response_items, metadata_only=False):
         DATA_KEYS = ['content', 'enc_item_key', 'auth_hash']
 
-        for response_item in response_items:
-            uuid = response_item['uuid']
+        # sort so deduplication is consistent
+        response_items = sorted(response_items, key=lambda x: x['created_at'])
 
-            if response_item['deleted']:
+        for item in response_items:
+            uuid = item['uuid']
+
+            if item['deleted']:
                 if uuid in self.items:
                     del self.items[uuid]
                 continue
 
-            response_item['dirty'] = False
+            item['dirty'] = False
 
             if uuid not in self.items:
                 self.items[uuid] = {}
 
-            for key, value in response_item.items():
+            for key, value in item.items():
                 if metadata_only and key in DATA_KEYS:
                     continue
                 self.items[uuid][key] = value
+
+            if item['content_type'] == 'Note':
+                self.cache_note(item)
 
     def sync_items(self):
         dirty_items = [deepcopy(item) for _, item in self.items.items() if item['dirty']]
@@ -47,43 +78,23 @@ class ItemManager:
         except KeyError:
             return item.get('updated_at', item['created_at'])
 
+    def get_note(self, title):
+        item = self.items[self.note_uuids[title]]
+        note = item['content']
+        text = note['text']
+
+        # Add a new line so it outputs pretty
+        if not text.endswith('\n'):
+            text += '\n';
+
+        text = text.encode() # convert to binary data
+
+        return dict(note_name=title, text=text, uuid=item['uuid'],
+                created=item['created_at'],
+                modified=self.get_updated(item))
+
     def get_notes(self):
-        notes = {}
-        note_items = [item for uuid, item in self.items.items()
-                if item['content_type'] == 'Note']
-        sorted_note_items = sorted(note_items, key=lambda x: x['created_at'])
-
-        for item in sorted_note_items:
-            note = item['content']
-            text = note['text']
-
-            # Add a new line so it outputs pretty
-            if not text.endswith('\n'):
-                text += '\n';
-
-            text = text.encode() # convert to binary data
-
-            original_title = note.get('title', '')
-            if not original_title:
-                original_title = 'Untitled'
-
-            # remove title duplicates by adding a number to the end
-            count = 0
-            while True:
-                title = original_title + ('' if not count else str(count + 1))
-
-                # clean up filenames
-                title = title.replace('/', '-') + self.ext
-
-                if title in notes:
-                    count += 1
-                else:
-                    break
-
-            notes[title] = dict(note_name=title, text=text, uuid=item['uuid'],
-                    created=item['created_at'],
-                    modified=self.get_updated(item))
-        return notes
+        return self.note_uuids
 
     def set_dirty(self, item):
         item['dirty'] = True

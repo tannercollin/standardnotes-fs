@@ -20,7 +20,6 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
     def __init__(self, sn_api, sync_sec, ext, path='.'):
         self.item_manager = ItemManager(sn_api, ext)
         self.tags = self.item_manager.get_tags()
-        self.notes = {}
 
         self.uid = os.getuid()
         self.gid = os.getgid()
@@ -73,8 +72,7 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
     def _path_to_note(self, path):
         pp = PurePath(path)
         note_name = pp.name
-        self.notes = self.item_manager.get_notes()
-        note = self.notes[note_name]
+        note = self.item_manager.get_note(note_name)
         return note, note_name, note['uuid']
 
     def getattr(self, path, fh=None):
@@ -82,7 +80,7 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
 
         try:
             if path == '/':
-                st = dict(self.dir_stat, st_size=len(self.notes))
+                st = dict(self.dir_stat, st_size=len(self.item_manager.get_notes()))
             elif pp.parts[1] == 'tags':
                 if len(pp.parts) == 3:
                     tag = self._pp_to_tag(pp)
@@ -119,15 +117,15 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
         pp = PurePath(path)
 
         if path == '/':
-            self.notes = self.item_manager.get_notes()
-            dirents.extend(list(self.notes.keys()))
+            notes = self.item_manager.get_notes()
+            dirents.extend(list(notes.keys()))
             dirents.append('tags')
         elif pp.parts[1] == 'tags':
             if len(pp.parts) == 3:
                 tag = self._pp_to_tag(pp)
-                self.notes = self.item_manager.get_notes()
-                note_names = [note_name for note_name, note in self.notes.items()
-                        if note['uuid'] in tag['notes']]
+                notes = self.item_manager.get_notes()
+                note_names = [note_name for note_name, uuid in notes.items()
+                        if uuid in tag['notes']]
                 dirents.extend(note_names)
             else:
                 self.tags = self.item_manager.get_tags()
