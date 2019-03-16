@@ -116,7 +116,8 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
         if path == '/':
             notes = self.item_manager.get_notes()
             dirents.extend(list(notes.keys()))
-            dirents.append('tags')
+            tags = self.item_manager.get_tags()
+            if len(tags): dirents.append('tags')
         elif pp.parts[1] == 'tags':
             if len(pp.parts) == 3:
                 tag = self._pp_to_tag(pp)

@@ -16,6 +16,9 @@ class ItemManager:
         # remove title from caches if it's in there
         uuid_cache.pop(title_cache.pop(item['uuid'], None), None)
 
+        if item['deleted']:
+            return
+
         content = item['content']
         content_type = item['content_type']
         original_title = content.get('title', 'Untitled')
@@ -47,6 +50,11 @@ class ItemManager:
         for item in response_items:
             uuid = item['uuid']
 
+            if item['content_type'] == 'Note':
+                self.cache_item_title(item, self.note_uuids, self.note_titles)
+            elif item['content_type'] == 'Tag':
+                self.cache_item_title(item, self.tag_uuids, self.tag_titles)
+
             if item['deleted']:
                 if uuid in self.items:
                     del self.items[uuid]
@@ -61,11 +69,6 @@ class ItemManager:
                 if metadata_only and key in DATA_KEYS:
                     continue
                 self.items[uuid][key] = value
-
-            if item['content_type'] == 'Note':
-                self.cache_item_title(item, self.note_uuids, self.note_titles)
-            elif item['content_type'] == 'Tag':
-                self.cache_item_title(item, self.tag_uuids, self.tag_titles)
 
     def sync_items(self):
         dirty_items = [deepcopy(item) for _, item in self.items.items() if item['dirty']]
