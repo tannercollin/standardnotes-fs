@@ -12,35 +12,13 @@ class ItemManager:
     tag_titles = {}
     ext = ''
 
-    def cache_note(self, item):
-        # remove note from caches if it's in there
-        self.note_uuids.pop(self.note_titles.pop(item['uuid'], None), None)
+    def cache_item_title(self, item, uuid_cache, title_cache):
+        # remove title from caches if it's in there
+        uuid_cache.pop(title_cache.pop(item['uuid'], None), None)
 
-        note = item['content']
-        original_title = note.get('title', 'Untitled')
-
-        # remove title duplicates by adding a number to the end
-        count = 0
-        while True:
-            title = original_title + ('' if not count else str(count + 1))
-
-            # clean up filenames
-            title = title.replace('/', '-') + self.ext
-
-            if title in self.note_uuids:
-                count += 1
-            else:
-                break
-
-        self.note_uuids[title] = item['uuid']
-        self.note_titles[item['uuid']] = title
-
-    def cache_tag(self, item):
-        # remove tag from caches if it's in there
-        self.tag_uuids.pop(self.tag_titles.pop(item['uuid'], None), None)
-
-        tag = item['content']
-        original_title = tag.get('title', 'Untitled')
+        content = item['content']
+        content_type = item['content_type']
+        original_title = content.get('title', 'Untitled')
 
         # remove title duplicates by adding a number to the end
         count = 0
@@ -49,14 +27,16 @@ class ItemManager:
 
             # clean up filenames
             title = title.replace('/', '-')
+            if content_type == 'Note':
+                title += self.ext
 
-            if title in self.tag_uuids:
+            if title in uuid_cache:
                 count += 1
             else:
                 break
 
-        self.tag_uuids[title] = item['uuid']
-        self.tag_titles[item['uuid']] = title
+        uuid_cache[title] = item['uuid']
+        title_cache[item['uuid']] = title
 
     def map_items(self, response_items, metadata_only=False):
         DATA_KEYS = ['content', 'enc_item_key', 'auth_hash']
@@ -83,9 +63,9 @@ class ItemManager:
                 self.items[uuid][key] = value
 
             if item['content_type'] == 'Note':
-                self.cache_note(item)
+                self.cache_item_title(item, self.note_uuids, self.note_titles)
             elif item['content_type'] == 'Tag':
-                self.cache_tag(item)
+                self.cache_item_title(item, self.tag_uuids, self.tag_titles)
 
     def sync_items(self):
         dirty_items = [deepcopy(item) for _, item in self.items.items() if item['dirty']]
