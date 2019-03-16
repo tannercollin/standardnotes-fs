@@ -19,7 +19,6 @@ FILE_PERMISSIONS = 0o600
 class StandardNotesFUSE(LoggingMixIn, Operations):
     def __init__(self, sn_api, sync_sec, ext, path='.'):
         self.item_manager = ItemManager(sn_api, ext)
-        self.tags = self.item_manager.get_tags()
 
         self.uid = os.getuid()
         self.gid = os.getgid()
@@ -65,9 +64,7 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
 
     def _pp_to_tag(self, pp):
         tag_name = pp.name
-        self.tags = self.item_manager.get_tags()
-        tag = self.tags[tag_name]
-        return tag
+        return self.item_manager.get_tag(tag_name)
 
     def _path_to_note(self, path):
         pp = PurePath(path)
@@ -91,7 +88,7 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
                 elif len(pp.parts) == 4:
                     st = self.getattr('/' + pp.name) # recursion
                 else:
-                    st = dict(self.dir_stat, st_size=len(self.tags))
+                    st = dict(self.dir_stat, st_size=len(self.item_manager.get_tags()))
             else:
                 note, note_name, uuid = self._path_to_note(path)
                 st = self.note_stat
@@ -128,8 +125,8 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
                         if uuid in tag['notes']]
                 dirents.extend(note_names)
             else:
-                self.tags = self.item_manager.get_tags()
-                dirents.extend(list(self.tags.keys()))
+                tags = self.item_manager.get_tags()
+                dirents.extend(list(tags.keys()))
 
         return dirents
 

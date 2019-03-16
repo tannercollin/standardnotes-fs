@@ -8,6 +8,8 @@ class ItemManager:
     items = {}
     note_uuids = {}
     note_titles = {}
+    tag_uuids = {}
+    tag_titles = {}
     ext = ''
 
     def cache_note(self, item):
@@ -32,6 +34,29 @@ class ItemManager:
 
         self.note_uuids[title] = item['uuid']
         self.note_titles[item['uuid']] = title
+
+    def cache_tag(self, item):
+        # remove tag from caches if it's in there
+        self.tag_uuids.pop(self.tag_titles.pop(item['uuid'], None), None)
+
+        tag = item['content']
+        original_title = tag.get('title', 'Untitled')
+
+        # remove title duplicates by adding a number to the end
+        count = 0
+        while True:
+            title = original_title + ('' if not count else str(count + 1))
+
+            # clean up filenames
+            title = title.replace('/', '-')
+
+            if title in self.tag_uuids:
+                count += 1
+            else:
+                break
+
+        self.tag_uuids[title] = item['uuid']
+        self.tag_titles[item['uuid']] = title
 
     def map_items(self, response_items, metadata_only=False):
         DATA_KEYS = ['content', 'enc_item_key', 'auth_hash']
@@ -59,6 +84,8 @@ class ItemManager:
 
             if item['content_type'] == 'Note':
                 self.cache_note(item)
+            elif item['content_type'] == 'Tag':
+                self.cache_tag(item)
 
     def sync_items(self):
         dirty_items = [deepcopy(item) for _, item in self.items.items() if item['dirty']]
@@ -133,36 +160,18 @@ class ItemManager:
         item['deleted'] = True
         self.set_dirty(item)
 
+    def get_tag(self, title):
+        item = self.items[self.tag_uuids[title]]
+        tag = item['content']
+        references = tag['references']
+        notes = [r['uuid'] for r in references if r['content_type'] == 'Note']
+
+        return dict(tag_name=title, notes=notes, uuid=item['uuid'],
+                created=item['created_at'],
+                modified=self.get_updated(item))
+
     def get_tags(self):
-        tags = {}
-        tag_items = [item for uuid, item in self.items.items()
-                if item['content_type'] == 'Tag']
-        sorted_tag_items = sorted(tag_items, key=lambda x: x['created_at'])
-
-        for item in sorted_tag_items:
-            tag = item['content']
-            references = tag['references']
-
-            notes = [r['uuid'] for r in references if r['content_type'] == 'Note']
-
-            # remove title duplicates by adding a number to the end
-            count = 0
-            while True:
-                title = tag['title'] + ('' if not count else str(count + 1))
-
-                # clean up filenames
-                title = title.replace('/', '-').replace(' ', '_')
-
-                if title in tags:
-                    count += 1
-                else:
-                    break
-
-            tags[title] = dict(tag_name=title, notes=notes, uuid=item['uuid'],
-                    created=item['created_at'],
-                    modified=item.get('updated_at', item['created_at']))
-
-        return tags
+        return self.tag_uuids
 
     def __init__(self, sn_api, ext):
         self.sn_api = sn_api
