@@ -16,22 +16,25 @@ Please enter your password (hidden):
 
 $ tree --dirsfirst ~/notes
 /home/tanner/notes
+├── archived
+│   └── old_notes.txt
 ├── tags
 │   ├── lists
 │   │   ├── Shopping.txt
 │   │   └── Todo.txt
 │   └── projects
 │       └── standardnotes-fs.txt
+├── trash
+│   ├── loveletter.txt
+│   └── renovations.txt
 ├── Accounts.txt
 ├── Books.txt
 ├── Checklists.txt
-├── Invention_Ideas.txt
-├── News_Notes.txt
 ├── Shopping.txt
 ├── standardnotes-fs.txt
 ├── Todo.txt
 └── Wifi.txt
-3 directories, 12 files
+5 directories, 13 files
 
 $ cat ~/notes/Todo.txt
 V Get groceries
