@@ -164,7 +164,12 @@ class ItemManager:
 
     def delete_note(self, uuid):
         item = self.items[uuid]
-        item['deleted'] = True
+
+        if self.get_trashed(item):
+            item['deleted'] = True
+        else:
+            item['content']['trashed'] = True
+
         self.set_dirty(item)
 
     def get_tag(self, title):
