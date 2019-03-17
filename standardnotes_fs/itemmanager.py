@@ -157,8 +157,22 @@ class ItemManager:
         item = self.items[uuid]
         self.set_dirty(item)
 
-    def rename_note(self, uuid, new_note_name):
+    def rename_note(self, uuid, pp):
         item = self.items[uuid]
+
+        if pp.parts[1] == 'archived':
+            ref = item['content']
+            ref = ref.setdefault('appData', {})
+            ref = ref.setdefault('org.standardnotes.sn', {})
+            ref['archived'] = True
+        elif pp.parts[1] == 'trash':
+            item['content']['trashed'] = True
+        elif self.get_archived(item):
+            item['content']['appData']['org.standardnotes.sn']['archived'] = False
+        elif self.get_trashed(item):
+            item['content']['trashed'] = False
+
+        new_note_name = pp.stem
         item['content']['title'] = new_note_name
         self.set_dirty(item)
 

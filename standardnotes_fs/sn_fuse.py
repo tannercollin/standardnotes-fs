@@ -235,7 +235,7 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
             raise FuseOSError(errno.EPERM)
 
         note, note_name, uuid = self._path_to_note(old)
-        self.item_manager.rename_note(uuid, pp.stem)
+        self.item_manager.rename_note(uuid, pp)
         self._modify_sync()
         return 0
 
