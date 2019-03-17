@@ -52,8 +52,8 @@ def parse_options():
     parser.add_argument('--config', default=CONFIG_FILE,
                         help='specify a config file location. Defaults to:\n'
                         ''+str(CONFIG_FILE))
-    parser.add_argument('--logout', action='store_true',
-                        help='delete login credentials saved in config and quit')
+    parser.add_argument('--remove-config', action='store_true',
+                        help='remove config file and user credentials')
     return parser.parse_args()
 
 def main():
@@ -76,13 +76,13 @@ def main():
     # figure out config file
     config_file = pathlib.Path(args.config)
 
-    # logout and quit if wanted
-    if args.logout:
+    # remove config and quit if wanted
+    if args.remove_config:
         try:
             config_file.unlink()
-            print('Config file deleted and logged out.')
+            print('Config file removed.')
         except OSError:
-            logging.info('Already logged out.')
+            logging.info('No config file found.')
         sys.exit(0)
 
     # make sure mountpoint is specified

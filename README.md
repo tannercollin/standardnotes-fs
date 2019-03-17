@@ -53,16 +53,16 @@ Unmount the directory:
 $ fusermount -u ~/notes
 ```
 
-Logout to switch accounts (optional):
+Remove config file to switch accounts (optional):
 ```text
-$ snfs --logout
+$ snfs --remove-config
 ```
 
 ## Usage
 ```text
 usage: snfs [-h] [--username USERNAME] [--password PASSWORD] [-v]
             [--foreground] [--sync-sec SYNC_SEC] [--sync-url SYNC_URL]
-            [--no-config-file] [--config CONFIG] [--logout]
+            [--ext EXT] [--no-config-file] [--config CONFIG] [--remove-config]
             [mountpoint]
 
 positional arguments:
@@ -84,7 +84,7 @@ optional arguments:
   --no-config-file     don't load or create a config file
   --config CONFIG      specify a config file location. Defaults to:
                        /home/tanner/.config/standardnotes-fs/standardnotes-fs.conf
-  --logout             delete login credentials saved in config and quit
+  --remove-config      remove config file and user credentials
 ```
 
 ## Installation
