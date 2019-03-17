@@ -89,6 +89,18 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
                     st = self.getattr('/' + pp.name) # recursion
                 else:
                     st = dict(self.dir_stat, st_size=len(self.item_manager.get_tags()))
+            elif pp.parts[1] == 'archived':
+                if len(pp.parts) == 3:
+                    st = self.getattr('/' + pp.name) # recursion
+                else:
+                    archived = self.item_manager.get_notes(archived=True)
+                    st = dict(self.dir_stat, st_size=len(archived))
+            elif pp.parts[1] == 'trash':
+                if len(pp.parts) == 3:
+                    st = self.getattr('/' + pp.name) # recursion
+                else:
+                    trashed = self.item_manager.get_notes(trashed=True)
+                    st = dict(self.dir_stat, st_size=len(trashed))
             else:
                 note, note_name, uuid = self._path_to_note(path)
                 st = self.note_stat
@@ -114,20 +126,28 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
         pp = PurePath(path)
 
         if path == '/':
-            notes = self.item_manager.get_notes()
-            dirents.extend(list(notes.keys()))
+            dirents.extend(self.item_manager.get_notes())
             tags = self.item_manager.get_tags()
             if len(tags): dirents.append('tags')
+            archived = self.item_manager.get_notes(archived=True)
+            if archived: dirents.append('archived')
+            trashed = self.item_manager.get_notes(trashed=True)
+            if trashed: dirents.append('trash')
         elif pp.parts[1] == 'tags':
             if len(pp.parts) == 3:
                 tag = self._pp_to_tag(pp)
-                notes = self.item_manager.get_notes()
-                note_names = [note_name for note_name, uuid in notes.items()
-                        if uuid in tag['notes']]
-                dirents.extend(note_names)
+                notes = [note for note in self.item_manager.get_notes()
+                    if self.item_manager.get_note_uuid(note) in tag['notes']]
+                dirents.extend(notes)
             else:
                 tags = self.item_manager.get_tags()
                 dirents.extend(list(tags.keys()))
+        elif pp.parts[1] == 'archived':
+            archived = self.item_manager.get_notes(archived=True)
+            dirents.extend(archived)
+        elif pp.parts[1] == 'trash':
+            trashed = self.item_manager.get_notes(trashed=True)
+            dirents.extend(trashed)
 
         return dirents
 

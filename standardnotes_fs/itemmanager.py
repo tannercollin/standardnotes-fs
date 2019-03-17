@@ -88,6 +88,18 @@ class ItemManager:
         except KeyError:
             return item.get('updated_at', item['created_at'])
 
+    def get_archived(self, item):
+        try:
+            return item['content']['appData']['org.standardnotes.sn']['archived']
+        except KeyError:
+            return False
+
+    def get_trashed(self, item):
+        try:
+            return item['content']['trashed']
+        except KeyError:
+            return False
+
     def get_note(self, title):
         item = self.items[self.note_uuids[title]]
         note = item['content']
@@ -103,8 +115,20 @@ class ItemManager:
                 created=item['created_at'],
                 modified=self.get_updated(item))
 
-    def get_notes(self):
-        return self.note_uuids
+    def get_note_uuid(self, title):
+        return self.note_uuids[title]
+
+    def get_notes(self, archived=False, trashed=False):
+        notes = [(k, self.items[v]) for k, v in self.note_uuids.items()]
+
+        if archived and trashed:
+            return []
+        elif archived:
+            return [k for k, v in notes if self.get_archived(v) and not self.get_trashed(v)]
+        elif trashed:
+            return [k for k, v in notes if self.get_trashed(v)]
+        else:
+            return [k for k, v in notes if not (self.get_archived(v) or self.get_trashed(v))]
 
     def set_dirty(self, item):
         item['dirty'] = True
