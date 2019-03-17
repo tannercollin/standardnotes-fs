@@ -145,6 +145,39 @@ Please enter your password (hidden):
 * Notes with identical names are deduplicated by adding a number to the end.
 * On the filesystem, notes will have the '.txt' extension appended to their name. Change this with the `--ext` argument. Example: `--ext '.md'`.
 
+## Development
+
+Install dependencies:
+```text
+$ sudo apt-get install fuse python3 python3-pip python3-virtualenv
+$ sudo python3 -m pip install --upgrade setuptools
+```
+
+Clone repo, create virtualenv, activate it, and install:
+```text
+$ git clone https://github.com/tannercollin/standardnotes-fs.git
+$ cd standardnotes-fs
+$ virtualenv -p python3 env
+$ . env/bin/activate
+(env) $ pip install --upgrade .
+```
+
+Standardnotes-fs is now installed in the virtual environment. Run it:
+```text
+(env) $ mkdir notes
+(env) $ snfs -vv --no-config-file --username standardnotes-fs@domain.com --password testaccount notes/
+```
+
+Exit with ctrl-c or unmount as instructed above.
+
+To make changes, edit the files and re-install it with pip:
+```text
+(env) $ vim standardnotes_fs/standardnotes_fs.py
+(env) $ pip install --upgrade .
+```
+
+It's now ready to be ran again with your changes.
+
 ## License
 This program is free and open-source software licensed under the GNU GPLv3. Please see the `LICENSE` file for details.
 
