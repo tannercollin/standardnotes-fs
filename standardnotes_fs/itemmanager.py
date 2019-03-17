@@ -16,7 +16,7 @@ class ItemManager:
         # remove title from caches if it's in there
         uuid_cache.pop(title_cache.pop(item['uuid'], None), None)
 
-        if item['deleted']:
+        if item.get('deleted', False):
             return
 
         content = item['content']
@@ -155,6 +155,7 @@ class ItemManager:
                                 uuid=uuid, created_at=creation_time,
                                 enc_item_key='', content=content)
         item = self.items[uuid]
+        self.cache_item_title(item, self.note_uuids, self.note_titles)
         self.set_dirty(item)
 
     def rename_note(self, uuid, pp):
