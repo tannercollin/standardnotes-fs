@@ -50,7 +50,7 @@ $ rsync -Wa ~/notes/ ~/notes_backup/
 
 Unmount the directory:
 ```text
-$ fusermount -u ~/notes
+$ snfs -u ~/notes
 ```
 
 Remove config file to switch accounts (optional):
@@ -63,6 +63,7 @@ $ snfs --remove-config
 usage: snfs [-h] [--username USERNAME] [--password PASSWORD] [-v]
             [--foreground] [--sync-sec SYNC_SEC] [--sync-url SYNC_URL]
             [--ext EXT] [--no-config-file] [--config CONFIG] [--remove-config]
+            [-u]
             [mountpoint]
 
 positional arguments:
@@ -85,6 +86,7 @@ optional arguments:
   --config CONFIG      specify a config file location. Defaults to:
                        /home/tanner/.config/standardnotes-fs/standardnotes-fs.conf
   --remove-config      remove config file and user credentials
+  -u, --unmount        unmount [mountpoint] folder
 ```
 
 ## Installation

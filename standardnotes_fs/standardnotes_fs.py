@@ -5,6 +5,8 @@ import logging
 import sys
 import os
 import pathlib
+import platform
+import subprocess
 
 import appdirs
 from fuse import FUSE
@@ -54,6 +56,8 @@ def parse_options():
                         ''+str(CONFIG_FILE))
     parser.add_argument('--remove-config', action='store_true',
                         help='remove config file and user credentials')
+    parser.add_argument('-u', '--unmount', action='store_true',
+                        help='unmount [mountpoint] folder')
     return parser.parse_args()
 
 def main():
@@ -83,12 +87,26 @@ def main():
             print('Config file removed.')
         except OSError:
             logging.info('No config file found.')
-        sys.exit(0)
+        if not args.unmount: sys.exit(0)
 
     # make sure mountpoint is specified
     if not args.mountpoint:
         print('No mountpoint specified.')
         sys.exit(1)
+
+    # unmount folder and quit if wanted
+    if args.unmount:
+        try:
+            if platform.system().lower() != 'darwin':
+                umount_cmd = ['fusermount', '-u']
+            else:
+                umount_cmd = ['umount']
+            subprocess.check_call(umount_cmd + [args.mountpoint])
+            print(args.mountpoint + ' unmounted.')
+        except:
+            print('Error unmounting file system.')
+            sys.exit(1)
+        sys.exit(0)
 
     # keep sync_sec above the minimum sync time
     if args.sync_sec < MINIMUM_SYNC_SEC:
