@@ -15,6 +15,11 @@ from standardnotes_fs.itemmanager import ItemManager
 
 DIR_PERMISSIONS = 0o700
 FILE_PERMISSIONS = 0o600
+ROOT_INODE = 0
+TAGS_INODE = 1
+TRASH_INODE = 2
+ARCHIVED_INODE = 3
+INODE_OFFSET = 100
 
 class StandardNotesFUSE(LoggingMixIn, Operations):
     def __init__(self, sn_api, sync_sec, ext, path='.'):
@@ -81,6 +86,7 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
         note, note_name, uuid = self._path_to_note(path)
         st = self.note_stat
         st['st_size'] = len(note['text'])
+        st['st_ino'] = note['inode'] + INODE_OFFSET
         st['st_ctime'] = iso8601.parse_date(note['created']).timestamp()
         st['st_mtime'] = iso8601.parse_date(note['modified']).timestamp()
         return st
@@ -90,12 +96,14 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
 
         try:
             if path == '/':
-                st = dict(self.dir_stat, st_size=len(self.item_manager.get_notes()))
+                notes = self.item_manager.get_notes()
+                st = dict(self.dir_stat, st_ino=ROOT_INODE, st_size=len(notes))
             elif pp.parts[1] == 'tags':
                 if len(pp.parts) == 3:
                     tag, tag_name, uuid = self._path_to_tag(path)
                     st = self.dir_stat
                     st['st_size'] = len(tag['notes'])
+                    st['st_ino'] = tag['inode'] + INODE_OFFSET
                     st['st_ctime'] = iso8601.parse_date(tag['created']).timestamp()
                     st['st_mtime'] = iso8601.parse_date(tag['modified']).timestamp()
                 elif len(pp.parts) == 4:
@@ -106,7 +114,8 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
                     else:
                         raise KeyError
                 else:
-                    st = dict(self.dir_stat, st_size=len(self.item_manager.get_tags()))
+                    tags = self.item_manager.get_tags()
+                    st = dict(self.dir_stat, st_ino=TAGS_INODE, st_size=len(tags))
             elif pp.parts[1] == 'archived':
                 notes = self.item_manager.get_notes(archived=True)
 
@@ -114,7 +123,7 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
                     if pp.name not in notes: raise KeyError
                     st = self.note_attr(path)
                 else:
-                    st = dict(self.dir_stat, st_size=len(notes))
+                    st = dict(self.dir_stat, st_ino=ARCHIVED_INODE, st_size=len(notes))
             elif pp.parts[1] == 'trash':
                 notes = self.item_manager.get_notes(trashed=True)
 
@@ -122,7 +131,7 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
                     if pp.name not in notes: raise KeyError
                     st = self.note_attr(path)
                 else:
-                    st = dict(self.dir_stat, st_size=len(notes))
+                    st = dict(self.dir_stat, st_ino=TRASH_INODE, st_size=len(notes))
             else:
                 notes = self.item_manager.get_notes()
                 if pp.name not in notes: raise KeyError

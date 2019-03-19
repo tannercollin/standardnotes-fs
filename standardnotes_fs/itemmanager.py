@@ -6,6 +6,7 @@ from standardnotes_fs.api import StandardNotesAPI
 
 class ItemManager:
     items = {}
+    item_count = 0
     note_uuids = {}
     note_titles = {}
     tag_uuids = {}
@@ -63,7 +64,8 @@ class ItemManager:
             item['dirty'] = False
 
             if uuid not in self.items:
-                self.items[uuid] = {}
+                self.items[uuid] = dict(count=self.item_count)
+                self.item_count += 1
 
             for key, value in item.items():
                 if metadata_only and key in DATA_KEYS:
@@ -77,6 +79,7 @@ class ItemManager:
         for item in dirty_items:
             item.pop('dirty', None)
             item.pop('updated_at', None)
+            item.pop('count', None)
 
         response = self.sn_api.sync(dirty_items)
         self.map_items(response['response_items'])
@@ -112,7 +115,7 @@ class ItemManager:
         text = text.encode() # convert to binary data
 
         return dict(note_name=title, text=text, uuid=item['uuid'],
-                created=item['created_at'],
+                created=item['created_at'], inode=item['count'],
                 modified=self.get_updated(item))
 
     def get_note_uuid(self, title):
@@ -197,7 +200,7 @@ class ItemManager:
         notes = [r['uuid'] for r in references if r['content_type'] == 'Note']
 
         return dict(tag_name=title, notes=notes, uuid=item['uuid'],
-                created=item['created_at'],
+                created=item['created_at'], inode=item['count'],
                 modified=self.get_updated(item))
 
     def get_tags(self):

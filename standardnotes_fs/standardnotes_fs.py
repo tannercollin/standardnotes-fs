@@ -202,7 +202,7 @@ def main():
         logging.info('Starting FUSE filesystem.')
         try:
             fuse = FUSE(StandardNotesFUSE(sn_api, sync_sec, args.ext),
-                        args.mountpoint,
+                        args.mountpoint, use_ino=True,
                         foreground=args.foreground,
                         nothreads=True) # FUSE can't make threads, but we can
         except RuntimeError as e:
