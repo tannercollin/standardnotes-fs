@@ -10,11 +10,11 @@ This is an _unofficial_ Standard Notes client.
 ## Example
 
 ```text
-$ snfs ~/notes
+$ snfs notes/
 Please enter your Standard Notes username: tanner@example.com
 Please enter your password (hidden): 
 
-$ tree --dirsfirst ~/notes
+$ tree --dirsfirst notes/
 /home/tanner/notes
 ├── archived
 │   └── old_notes.txt
@@ -36,24 +36,29 @@ $ tree --dirsfirst ~/notes
 └── Wifi.txt
 5 directories, 13 files
 
-$ cat ~/notes/Todo.txt
+$ cat notes/Todo.txt
 V Get groceries
 V Laundry
 X Replace kitchen light
 O Write standardnotes-fs readme
 O Release standardnotes-fs
 
-$ vim ~/notes/Shopping.txt
-$ vim ~/notes/tags/lists/Todo.txt
+# Editing:
+$ vim notes/Shopping.txt
+$ vim notes/tags/lists/Todo.txt
 
-$ rsync -Wa ~/notes/ ~/notes_backup/
+# Tags:
+$ mv notes/Checklists.txt notes/tags/lists/
+$ rm notes/tags/projects/standardnotes-fs.txt
+
+$ rsync -Wa notes/ notes_backup/
 ```
 
 ### When finished
 
 Unmount the directory:
 ```text
-$ snfs -u ~/notes
+$ snfs -u notes/
 ```
 
 Remove config file to switch accounts (optional):
@@ -145,7 +150,6 @@ Please enter your password (hidden):
 * Your account's encryption keys are stored in a config file on disk. This can be disabled with `--no-config-file`.
 * By default the client syncs with the Standard Notes server every 30 seconds and after any note modifications are saved.
 * If connection to the server is lost, it will keep trying to sync periodically.
-* Filesystem functions currently supported: getattr, readdir, read, truncate, write, create, unlink, utimens, and rename.
 * Creating hidden files (names beginning with a period) is disabled to prevent junk file creation.
 * Notes with identical names are deduplicated by adding a number to the end.
 * On the filesystem, notes will have the '.txt' extension appended to their name. Change this with the `--ext` argument. Example: `--ext '.md'`.

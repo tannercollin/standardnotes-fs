@@ -130,6 +130,9 @@ class ItemManager:
         else:
             return [k for k, v in notes if not (self.get_archived(v) or self.get_trashed(v))]
 
+    def get_all_notes(self):
+        return [k for k, v in self.note_uuids.items()]
+
     def set_dirty(self, item):
         item['dirty'] = True
 
@@ -214,6 +217,28 @@ class ItemManager:
     def delete_tag(self, uuid):
         item = self.items[uuid]
         item['deleted'] = True
+        self.set_dirty(item)
+
+    def tag_note(self, uuid, note_uuid):
+        item = self.items[uuid]
+        references = item['content']['references']
+        note_ref = dict(uuid=note_uuid, content_type='Note')
+        if note_ref not in references:
+            references.append(note_ref)
+            self.set_dirty(item)
+
+    def untag_note(self, uuid, note_uuid):
+        item = self.items[uuid]
+        references = item['content']['references']
+        note_ref = dict(uuid=note_uuid, content_type='Note')
+        while note_ref in references:
+            note_index = references.index(note_ref)
+            references.pop(note_index)
+        self.set_dirty(item)
+
+    def rename_tag(self, uuid, name):
+        item = self.items[uuid]
+        item['content']['title'] = name
         self.set_dirty(item)
 
     def __init__(self, sn_api, ext):

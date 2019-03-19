@@ -77,6 +77,14 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
         note = self.item_manager.get_note(note_name)
         return note, note_name, note['uuid']
 
+    def note_attr(self, path):
+        note, note_name, uuid = self._path_to_note(path)
+        st = self.note_stat
+        st['st_size'] = len(note['text'])
+        st['st_ctime'] = iso8601.parse_date(note['created']).timestamp()
+        st['st_mtime'] = iso8601.parse_date(note['modified']).timestamp()
+        return st
+
     def getattr(self, path, fh=None):
         pp = PurePath(path)
 
@@ -91,27 +99,34 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
                     st['st_ctime'] = iso8601.parse_date(tag['created']).timestamp()
                     st['st_mtime'] = iso8601.parse_date(tag['modified']).timestamp()
                 elif len(pp.parts) == 4:
-                    st = self.getattr('/' + pp.name) # recursion
+                    tag, tag_name, tag_uuid = self._path_to_tag(path)
+                    note, note_name, note_uuid = self._path_to_note(path)
+                    if note_uuid in tag['notes']:
+                        st = self.getattr('/' + pp.name) # recursion
+                    else:
+                        raise KeyError
                 else:
                     st = dict(self.dir_stat, st_size=len(self.item_manager.get_tags()))
             elif pp.parts[1] == 'archived':
+                notes = self.item_manager.get_notes(archived=True)
+
                 if len(pp.parts) == 3:
-                    st = self.getattr('/' + pp.name) # recursion
+                    if pp.name not in notes: raise KeyError
+                    st = self.note_attr(path)
                 else:
-                    archived = self.item_manager.get_notes(archived=True)
-                    st = dict(self.dir_stat, st_size=len(archived))
+                    st = dict(self.dir_stat, st_size=len(notes))
             elif pp.parts[1] == 'trash':
+                notes = self.item_manager.get_notes(trashed=True)
+
                 if len(pp.parts) == 3:
-                    st = self.getattr('/' + pp.name) # recursion
+                    if pp.name not in notes: raise KeyError
+                    st = self.note_attr(path)
                 else:
-                    trashed = self.item_manager.get_notes(trashed=True)
-                    st = dict(self.dir_stat, st_size=len(trashed))
+                    st = dict(self.dir_stat, st_size=len(notes))
             else:
-                note, note_name, uuid = self._path_to_note(path)
-                st = self.note_stat
-                st['st_size'] = len(note['text'])
-                st['st_ctime'] = iso8601.parse_date(note['created']).timestamp()
-                st['st_mtime'] = iso8601.parse_date(note['modified']).timestamp()
+                notes = self.item_manager.get_notes()
+                if pp.name not in notes: raise KeyError
+                st = self.note_attr(path)
         except KeyError:
             raise FuseOSError(errno.ENOENT)
 
@@ -184,8 +199,9 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
         pp = PurePath(path)
         note_name = pp.name
 
-        if pp.parts[1] == 'tags':
-            logging.error('Unable to create files in tags directory.')
+        # discourage use of cp, it destroys existing notes
+        if pp.parts[1] in ['tags', 'archived', 'trash']:
+            logging.error('Unable to create files in that directory.')
             raise FuseOSError(errno.EPERM)
 
         # disallow hidden files (usually editor / OS files)
@@ -198,6 +214,10 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
             logging.error('New notes must end in ' + self.ext)
             raise FuseOSError(errno.EPERM)
 
+        if note_name in self.item_manager.get_all_notes():
+            logging.error('Note already exists.')
+            raise FuseOSError(errno.EPERM)
+
         title = pp.stem
 
         self.item_manager.create_note(title)
@@ -208,13 +228,16 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
         pp = PurePath(path)
 
         if pp.parts[1] == 'tags':
-            logging.error('Untagging not yet supported.')
-            raise FuseOSError(errno.EPERM)
-
-        note, note_name, uuid = self._path_to_note(path)
-        self.item_manager.delete_note(uuid)
-        self._modify_sync()
-        return 0
+            tag, tag_name, tag_uuid = self._path_to_tag(path)
+            note, note_name, note_uuid = self._path_to_note(path)
+            self.item_manager.untag_note(tag_uuid, note_uuid)
+            self._modify_sync()
+            return 0
+        else:
+            note, note_name, uuid = self._path_to_note(path)
+            self.item_manager.delete_note(uuid)
+            self._modify_sync()
+            return 0
 
     def mkdir(self, path, mode):
         pp = PurePath(path)
@@ -239,14 +262,37 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
         return 0
 
     def rename(self, old, new):
-        pp = PurePath(new)
+        pp_old = PurePath(old)
+        pp_new = PurePath(new)
 
-        if pp.parts[1] == 'tags':
-            logging.error('Tagging not yet supported.')
+        # rename, archive, trash note
+        if pp_old.parts[1] != 'tags' and pp_new.parts[1] != 'tags':
+            note, note_name, uuid = self._path_to_note(old)
+            self.item_manager.rename_note(uuid, pp_new)
+            self._modify_sync()
+            return 0
+
+        # rename tag
+        if (len(pp_old.parts) == 3 and len(pp_new.parts) == 3
+            and pp_old.parts[1] == 'tags' and pp_new.parts[1] == 'tags'):
+            tag, tag_name, tag_uuid = self._path_to_tag(old)
+            self.item_manager.rename_tag(tag_uuid, pp_new.name)
+            self._modify_sync()
+            return 0
+
+        if pp_old.parts[-1] != pp_new.parts[-1]:
+            logging.error('Unable to rename note from inside tags folder.')
             raise FuseOSError(errno.EPERM)
 
-        note, note_name, uuid = self._path_to_note(old)
-        self.item_manager.rename_note(uuid, pp)
+        # tag note
+        if pp_new.parts[1] == 'tags' and len(pp_new.parts) == 4:
+            tag, tag_name, tag_uuid = self._path_to_tag(new)
+            note, note_name, note_uuid = self._path_to_note(old)
+            self.item_manager.tag_note(tag_uuid, note_uuid)
+        else:
+            logging.error('Unable to untag with mv.')
+            raise FuseOSError(errno.EPERM)
+
         self._modify_sync()
         return 0
 
