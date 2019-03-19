@@ -200,6 +200,22 @@ class ItemManager:
     def get_tags(self):
         return self.tag_uuids
 
+    def create_tag(self, name):
+        uuid = str(uuid1())
+        content = dict(title=name, references=[])
+        creation_time = datetime.utcnow().isoformat() + 'Z'
+        self.items[uuid] = dict(content_type='Tag', auth_hash=None,
+                                uuid=uuid, created_at=creation_time,
+                                enc_item_key='', content=content)
+        item = self.items[uuid]
+        self.cache_item_title(item, self.tag_uuids, self.tag_titles)
+        self.set_dirty(item)
+
+    def delete_tag(self, uuid):
+        item = self.items[uuid]
+        item['deleted'] = True
+        self.set_dirty(item)
+
     def __init__(self, sn_api, ext):
         self.sn_api = sn_api
         self.ext = ext

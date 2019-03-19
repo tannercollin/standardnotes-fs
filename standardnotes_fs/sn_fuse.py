@@ -62,9 +62,14 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
     def _modify_sync(self):
         self.run_sync.set()
 
-    def _pp_to_tag(self, pp):
-        tag_name = pp.name
-        return self.item_manager.get_tag(tag_name)
+    def _path_to_tag(self, path):
+        pp = PurePath(path)
+        if pp.parts[1] == 'tags':
+            tag_name = pp.parts[2]
+            tag = self.item_manager.get_tag(tag_name)
+            return tag, tag_name, tag['uuid']
+        else:
+            raise KeyError
 
     def _path_to_note(self, path):
         pp = PurePath(path)
@@ -80,7 +85,7 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
                 st = dict(self.dir_stat, st_size=len(self.item_manager.get_notes()))
             elif pp.parts[1] == 'tags':
                 if len(pp.parts) == 3:
-                    tag = self._pp_to_tag(pp)
+                    tag, tag_name, uuid = self._path_to_tag(path)
                     st = self.dir_stat
                     st['st_size'] = len(tag['notes'])
                     st['st_ctime'] = iso8601.parse_date(tag['created']).timestamp()
@@ -135,7 +140,7 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
             if trashed: dirents.append('trash')
         elif pp.parts[1] == 'tags':
             if len(pp.parts) == 3:
-                tag = self._pp_to_tag(pp)
+                tag, tag_name, uuid = self._path_to_tag(path)
                 notes = [note for note in self.item_manager.get_notes()
                     if self.item_manager.get_note_uuid(note) in tag['notes']]
                 dirents.extend(notes)
@@ -212,7 +217,13 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
         return 0
 
     def mkdir(self, path, mode):
-        logging.error('Creation of directories is disabled.')
+        pp = PurePath(path)
+
+        if pp.parts[1] == 'tags' and len(pp.parts) == 3:
+            self.item_manager.create_tag(pp.parts[2])
+            self._modify_sync()
+            return 0
+
         raise FuseOSError(errno.EPERM)
 
     def utimens(self, path, times=None):
@@ -254,7 +265,14 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
         return 0
 
     def rmdir(self, path):
-        logging.error('Deleting tags not yet supported.')
+        pp = PurePath(path)
+
+        if pp.parts[1] == 'tags' and len(pp.parts) == 3:
+            tag, tag_name, uuid = self._path_to_tag(path)
+            self.item_manager.delete_tag(uuid)
+            self._modify_sync()
+            return 0
+
         raise FuseOSError(errno.EPERM)
 
     def symlink(self, target, source):
