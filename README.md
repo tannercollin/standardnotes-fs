@@ -13,6 +13,7 @@ This is an _unofficial_ Standard Notes client.
 $ snfs notes/
 Please enter your Standard Notes username: tanner@example.com
 Please enter your password (hidden): 
+Enter your two-factor authentication code: 123456
 
 $ tree --dirsfirst notes/
 /home/tanner/notes
@@ -102,7 +103,7 @@ optional arguments:
 
 Install dependencies:
 ```text
-$ sudo apt-get install fuse python3 python3-pip
+$ sudo apt install fuse python3 python3-pip
 ```
 
 #### With Sudo
@@ -158,17 +159,17 @@ Please enter your password (hidden):
 
 Install dependencies:
 ```text
-$ sudo apt-get install fuse python3 python3-pip python3-virtualenv
+$ sudo apt install fuse python3 python3-pip python3-venv
 $ sudo python3 -m pip install --upgrade setuptools
 ```
 
-Clone repo, create virtualenv, activate it, and install:
+Clone repo, create a venv, activate it, and install:
 ```text
 $ git clone https://github.com/tannercollin/standardnotes-fs.git
 $ cd standardnotes-fs
-$ virtualenv -p python3 env
+$ python3 -m venv env
 $ . env/bin/activate
-(env) $ pip install --upgrade .
+(env) $ pip install --upgrade --no-cache-dir .
 ```
 
 Standardnotes-fs is now installed in the virtual environment. Run it:
