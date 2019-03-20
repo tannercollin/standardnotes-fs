@@ -158,11 +158,13 @@ class ItemManager:
         content = dict(title=name, text='', references=[])
         creation_time = datetime.utcnow().isoformat() + 'Z'
         self.items[uuid] = dict(content_type='Note', auth_hash=None,
-                                uuid=uuid, created_at=creation_time,
-                                enc_item_key='', content=content)
+            uuid=uuid, created_at=creation_time, enc_item_key='',
+            count=self.item_count, content=content)
+        self.item_count += 1
         item = self.items[uuid]
         self.cache_item_title(item, self.note_uuids, self.note_titles)
         self.set_dirty(item)
+        return uuid
 
     def rename_note(self, uuid, pp):
         item = self.items[uuid]
@@ -211,8 +213,9 @@ class ItemManager:
         content = dict(title=name, references=[])
         creation_time = datetime.utcnow().isoformat() + 'Z'
         self.items[uuid] = dict(content_type='Tag', auth_hash=None,
-                                uuid=uuid, created_at=creation_time,
-                                enc_item_key='', content=content)
+            uuid=uuid, created_at=creation_time, enc_item_key='',
+            count = self.item_count, content=content)
+        self.item_count += 1
         item = self.items[uuid]
         self.cache_item_title(item, self.tag_uuids, self.tag_titles)
         self.set_dirty(item)

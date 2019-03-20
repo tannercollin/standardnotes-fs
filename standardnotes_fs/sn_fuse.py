@@ -208,8 +208,8 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
         pp = PurePath(path)
         note_name = pp.name
 
-        # discourage use of cp, it destroys existing notes
-        if pp.parts[1] in ['tags', 'archived', 'trash']:
+        # disallow created notes in these directories
+        if len(pp.parts) < 4 and pp.parts[1] in ['tags', 'archived', 'trash']:
             logging.error('Unable to create files in that directory.')
             raise FuseOSError(errno.EPERM)
 
@@ -229,7 +229,12 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
 
         title = pp.stem
 
-        self.item_manager.create_note(title)
+        note_uuid = self.item_manager.create_note(title)
+
+        if pp.parts[1] == 'tags':
+            tag, tag_name, tag_uuid = self._path_to_tag(path)
+            self.item_manager.tag_note(tag_uuid, note_uuid)
+
         self._modify_sync()
         return 0
 
@@ -299,7 +304,7 @@ class StandardNotesFUSE(LoggingMixIn, Operations):
             note, note_name, note_uuid = self._path_to_note(old)
             self.item_manager.tag_note(tag_uuid, note_uuid)
         else:
-            logging.error('Unable to untag with mv.')
+            logging.error('Invalid mv operation.')
             raise FuseOSError(errno.EPERM)
 
         self._modify_sync()
