@@ -176,9 +176,11 @@ def main():
     except ConnectionError:
         log_msg = 'Unable to connect to the sync server at "%s".'
         print(log_msg % sync_url)
+        sys.exit(1)
     except MissingSchema:
         log_msg = 'Invalid sync server url "%s".'
         print(log_msg % sync_url)
+        sys.exit(1)
 
     # write settings back if good, clear if not
     if not args.no_config_file:
@@ -196,7 +198,7 @@ def main():
             config_file.chmod(0o600)
         except OSError:
             log_msg = 'Unable to write config file "%s".'
-            logging.warning(log_msg % str(config_file))
+            print(log_msg % str(config_file))
 
     if login_success:
         logging.info('Starting FUSE filesystem.')
