@@ -154,6 +154,7 @@ Please enter your password (hidden):
 * Creating hidden files (names beginning with a period) is disabled to prevent junk file creation.
 * Notes with identical names are deduplicated by adding a number to the end.
 * On the filesystem, notes will have the '.txt' extension appended to their name. Change this with the `--ext` argument. Example: `--ext '.md'`.
+* neovim/nvim users have had errors about nvim being "unable to create backup file" when writing. This is a bug with neovim. Executing `mkdir ~/.local/share/nvim/backup` might fix it.
 
 ## Development
 
