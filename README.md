@@ -160,7 +160,7 @@ Please enter your password (hidden):
 
 Install dependencies:
 ```text
-$ sudo apt install fuse python3 python3-pip python3-venv
+$ sudo apt install fuse python3 python3-pip python-virtualenv python3-virtualenv
 $ sudo python3 -m pip install --upgrade setuptools
 ```
 
@@ -168,7 +168,7 @@ Clone repo, create a venv, activate it, and install:
 ```text
 $ git clone https://github.com/tannercollin/standardnotes-fs.git
 $ cd standardnotes-fs
-$ python3 -m venv env
+$ virtualenv -p python3 env
 $ . env/bin/activate
 (env) $ pip install --upgrade --no-cache-dir .
 ```
