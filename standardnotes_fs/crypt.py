@@ -4,6 +4,7 @@ from copy import deepcopy
 import hashlib
 import hmac
 import json
+import logging
 import sys
 
 from Crypto.Cipher import AES
@@ -49,6 +50,8 @@ class EncryptionHelper:
         uuid = item['uuid']
         content = json.dumps(item['content'])
 
+        logging.debug('Encrypting item {} with content: {}'.format(uuid, content))
+
         # all this is to follow the Standard Notes spec
         item_key = hex(random.getrandbits(AES_KEY_LEN * 2))
         # remove '0x', pad with 0's, then split in half
@@ -72,6 +75,8 @@ class EncryptionHelper:
         content = item['content']
         enc_item_key = item['enc_item_key']
         version = content[:3]
+
+        logging.debug('Decrypting item {} of version {} with content: {}'.format(uuid, version, content))
 
         if version == '001' or version == '002':
             print('Old encryption protocol detected. This version is not '
@@ -128,6 +133,7 @@ class EncryptionHelper:
         if local_uuid != uuid:
             print('UUID does not match. This could indicate tampering or '
                   'that something is wrong with the server. Exiting.')
+            logging.debug('UUID: {}, Local UUID: {}'.format(uuid, local_uuid))
             sys.exit(1)
 
         string_to_auth = ':'.join([version, uuid, IV, ciphertext])
@@ -138,6 +144,7 @@ class EncryptionHelper:
         if not hmac.compare_digest(local_auth_hash, auth_hash):
             print('Auth hash does not match. This could indicate tampering or '
                   'that something is wrong with the server. Exiting.')
+            logging.debug('Auth Hash: {}, Local Auth Hash: {}'.format(auth_hash, local_auth_hash))
             sys.exit(1)
 
         cipher = AES.new(unhexlify(encryption_key), AES.MODE_CBC, unhexlify(IV))
