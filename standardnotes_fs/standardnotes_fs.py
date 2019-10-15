@@ -25,6 +25,9 @@ APP_NAME = 'standardnotes-fs'
 cfg_env = os.environ.get('SN_FS_CONFIG_PATH')
 CONFIG_PATH = cfg_env if cfg_env else appdirs.user_config_dir(APP_NAME)
 CONFIG_FILE = pathlib.PurePath(CONFIG_PATH, APP_NAME + '.conf')
+cfg_env = os.environ.get('SN_FS_CREDS_PATH')
+CREDS_PATH = cfg_env if cfg_env else appdirs.user_cache_dir(APP_NAME)
+CREDS_FILE = pathlib.PurePath(CREDS_PATH, APP_NAME + '.conf')
 
 def parse_options():
     parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
@@ -49,13 +52,16 @@ def parse_options():
     parser.add_argument('--ext', default=DEFAULT_EXT,
                         help='file extension to add to note titles. Default: '
                         ''+DEFAULT_EXT)
-    parser.add_argument('--no-config-file', action='store_true',
-                        help='don\'t load or create a config file')
+    parser.add_argument('--no-config-files', action='store_true',
+                        help='don\'t load or create config / cred files')
     parser.add_argument('--config', default=CONFIG_FILE,
                         help='specify a config file location. Defaults to:\n'
                         ''+str(CONFIG_FILE))
-    parser.add_argument('--remove-config', action='store_true',
-                        help='remove config file and user credentials')
+    parser.add_argument('--creds', default=CREDS_FILE,
+                        help='specify a credentials file location. Defaults to:\n'
+                        ''+str(CREDS_FILE))
+    parser.add_argument('--logout', action='store_true',
+                        help='remove config files and user credentials')
     parser.add_argument('-u', '--unmount', action='store_true',
                         help='unmount [mountpoint] folder')
     return parser.parse_args()
@@ -63,6 +69,7 @@ def parse_options():
 def main():
     args = parse_options()
     config = ConfigParser()
+    creds = ConfigParser()
     keys = {}
     login_success = False
 
@@ -77,16 +84,21 @@ def main():
                         format='%(levelname)-8s: %(message)s')
     if args.verbosity: args.foreground = True
 
-    # figure out config file
+    # figure out config files
     config_file = pathlib.Path(args.config)
+    creds_file = pathlib.Path(args.creds)
 
     # remove config and quit if wanted
-    if args.remove_config:
+    if args.logout:
         try:
             config_file.unlink()
-            print('Config file removed.')
         except OSError:
             logging.info('No config file found.')
+        try:
+            creds_file.unlink()
+        except OSError:
+            logging.info('No creds file found.')
+        print('Config files removed.')
         if not args.unmount: sys.exit(0)
 
     # make sure mountpoint is specified
@@ -117,7 +129,7 @@ def main():
         sync_sec = args.sync_sec
 
     # load config file settings
-    if not args.no_config_file:
+    if not args.no_config_files:
         try:
             config_file.parent.mkdir(mode=0o0700, parents=True)
         except FileExistsError:
@@ -139,6 +151,29 @@ def main():
             log_msg = 'Unable to read config file "%s".'
             logging.info(log_msg % str(config_file))
 
+    # load creds file settings
+    if not args.no_config_files:
+        try:
+            creds_file.parent.mkdir(mode=0o0700, parents=True)
+        except FileExistsError:
+            pass
+        except OSError:
+            log_msg = 'Error creating creds file directory "%s".'
+            print(log_msg % str(creds_file.parent))
+            sys.exit(1)
+        finally:
+            log_msg = 'Using creds directory "%s".'
+            logging.info(log_msg % str(creds_file.parent))
+
+        try:
+            with creds_file.open() as f:
+                creds.read_file(f)
+                log_msg = 'Loaded creds file "%s".'
+                logging.info(log_msg % str(creds_file))
+        except OSError:
+            log_msg = 'Unable to read creds file "%s".'
+            logging.info(log_msg % str(creds_file))
+
     # figure out all login params
     if args.sync_url:
         sync_url = args.sync_url
@@ -150,11 +185,11 @@ def main():
     logging.info(log_msg % sync_url)
 
     if (config.has_option('user', 'username')
-        and config.has_section('keys')
+        and creds.has_section('keys')
         and not args.username
         and not args.password):
             username = config.get('user', 'username')
-            keys = dict(config.items('keys'))
+            keys = dict(creds.items('keys'))
     else:
         username = (args.username if args.username else
                     input('Please enter your Standard Notes username: '))
@@ -182,14 +217,15 @@ def main():
         print(log_msg % sync_url)
         sys.exit(1)
 
-    # write settings back if good, clear if not
-    if not args.no_config_file:
+    # write config back if good, clear if not
+    if not args.no_config_files:
         try:
             with config_file.open(mode='w+') as f:
                 if login_success:
                     config.read_dict(dict(user=dict(sync_url=sync_url,
                                                     username=username),
-                                          keys=keys))
+                                          ))
+                    config.remove_section('keys')
                     config.write(f)
                     log_msg = 'Config written to file "%s".'
                 else:
@@ -199,6 +235,22 @@ def main():
         except OSError:
             log_msg = 'Unable to write config file "%s".'
             print(log_msg % str(config_file))
+
+    # write creds back if good, clear if not
+    if not args.no_config_files:
+        try:
+            with creds_file.open(mode='w+') as f:
+                if login_success:
+                    creds.read_dict(dict(keys=keys))
+                    creds.write(f)
+                    log_msg = 'Creds written to file "%s".'
+                else:
+                    log_msg = 'Clearing creds file "%s".'
+                logging.info(log_msg % creds_file)
+            creds_file.chmod(0o600)
+        except OSError:
+            log_msg = 'Unable to write creds file "%s".'
+            print(log_msg % str(creds_file))
 
     if login_success:
         logging.info('Starting FUSE filesystem.')

@@ -62,17 +62,18 @@ Unmount the directory:
 $ snfs -u notes/
 ```
 
-Remove config file to switch accounts (optional):
+Logout to switch accounts:
 ```text
-$ snfs --remove-config
+$ snfs --logout
 ```
 
 ## Usage
 ```text
-usage: snfs [-h] [--username USERNAME] [--password PASSWORD] [-v]
-            [--foreground] [--sync-sec SYNC_SEC] [--sync-url SYNC_URL]
-            [--ext EXT] [--no-config-file] [--config CONFIG] [--remove-config]
-            [-u]
+usage: snfs [-h] [--username USERNAME] [--password PASSWORD]
+            [-v] [--foreground] [--sync-sec SYNC_SEC]
+            [--sync-url SYNC_URL] [--ext EXT]
+            [--no-config-files] [--config CONFIG]
+            [--creds CREDS] [--logout] [-u]
             [mountpoint]
 
 positional arguments:
@@ -91,11 +92,14 @@ optional arguments:
   --sync-url SYNC_URL  URL of Standard File sync server. Defaults to:
                        https://sync.standardnotes.org
   --ext EXT            file extension to add to note titles. Default: .txt
-  --no-config-file     don't load or create a config file
+  --no-config-files    don't load or create config / cred files
   --config CONFIG      specify a config file location. Defaults to:
                        /home/tanner/.config/standardnotes-fs/standardnotes-fs.conf
-  --remove-config      remove config file and user credentials
+  --creds CREDS        specify a credentials file location. Defaults to:
+                       /home/tanner/.cache/standardnotes-fs/standardnotes-fs.conf
+  --logout             remove config files and user credentials
   -u, --unmount        unmount [mountpoint] folder
+
 ```
 
 ## Installation
