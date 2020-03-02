@@ -131,8 +131,10 @@ class EncryptionHelper:
             version, auth_hash, local_uuid, IV, ciphertext = components
 
         if local_uuid != uuid:
-            print('UUID does not match. This could indicate tampering or '
-                  'that something is wrong with the server. Exiting.')
+            print('Note UUID does not match.')
+            print('This could be caused by a conflicted copy of a note.')
+            print('Rename or delete the conflicted copy to fix.')
+            print('Could also be a sign of tampering. Exiting for security...')
             logging.debug('UUID: {}, Local UUID: {}'.format(uuid, local_uuid))
             sys.exit(1)
 
