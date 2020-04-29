@@ -71,14 +71,21 @@ class StandardNotesAPI:
 
     def sign_in(self, keys):
         self.keys = keys
-        res = self.api.post('/auth/sign_in', dict(email=self.username,
-                                                  password=self.keys['pw'],
-                                                  **self.mfa_data))
-
-        if self.check_mfa_error(res):
-            self.sign_in(keys)
+        # if jwt is present, we don't need to authenticate again
+        if 'jwt' in self.keys:
+            self.api.add_header(dict(Authorization='Bearer ' + self.keys['jwt']))
         else:
-            self.api.add_header(dict(Authorization='Bearer ' + res['token']))
+            res = self.api.post('/auth/sign_in', dict(email=self.username,
+                                                      password=self.keys['pw'],
+                                                      **self.mfa_data))
+
+            if self.check_mfa_error(res):
+                self.keys = self.sign_in(keys)
+            else:
+                self.api.add_header(dict(Authorization='Bearer ' + res['token']))
+                self.keys['jwt'] = res['token']
+
+        return self.keys
 
     def sync(self, dirty_items):
         items = self.handle_dirty_items(dirty_items)

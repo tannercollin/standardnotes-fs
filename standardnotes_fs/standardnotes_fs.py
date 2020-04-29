@@ -202,7 +202,7 @@ def main():
         if not keys:
             keys = sn_api.gen_keys(password)
             del password
-        sn_api.sign_in(keys)
+        keys = sn_api.sign_in(keys)
         log_msg = 'Successfully logged into account "%s".'
         logging.info(log_msg % username)
         login_success = True
