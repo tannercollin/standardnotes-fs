@@ -179,8 +179,8 @@ $ . env/bin/activate
 
 Standardnotes-fs is now installed in the virtual environment. Run it:
 ```text
-(env) $ mkdir notes
-(env) $ snfs -vv --no-config-file --username standardnotes-fs@domain.com --password testaccount notes/
+(env) $ mkdir test
+(env) $ snfs -vv --no-config-file --username standardnotes-fs@domain.com --password testaccount test/
 ```
 
 Exit with ctrl-c or unmount as instructed above.
