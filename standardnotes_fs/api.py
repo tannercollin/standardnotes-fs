@@ -1,3 +1,4 @@
+import json
 import requests
 import sys
 
@@ -19,7 +20,13 @@ class RESTAPI:
 
     def post(self, route, data=None):
         url = self.base_url + route
-        return requests.post(url, json=data, headers=self.headers).json()
+        res = requests.post(url, json=data, headers=self.headers)
+
+        # res.json() will fail if the response is empty/invalid JSON
+        try:
+            return res.json()
+        except json.decoder.JSONDecodeError:
+            return None
 
     def add_header(self, header):
         self.headers.update(header)
@@ -37,6 +44,18 @@ class StandardNotesAPI:
                 return True
             else:
                 raise SNAPIException(res['error']['message'])
+    
+
+    def check_jwt_validity(self):
+        # this will return None if our jwt has been invalidated
+        res = self.api.post('/items/sync', dict(limit=1))
+        if not res:
+            # Remove the invalid jwt
+            del self.keys['jwt']
+            return False
+        else:
+            return True
+
 
     def get_auth_params_for_email(self):
         res = self.api.get('/auth/params', dict(email=self.username,
@@ -71,19 +90,23 @@ class StandardNotesAPI:
 
     def sign_in(self, keys):
         self.keys = keys
+
         # if jwt is present, we don't need to authenticate again
         if 'jwt' in self.keys:
             self.api.add_header(dict(Authorization='Bearer ' + self.keys['jwt']))
-        else:
-            res = self.api.post('/auth/sign_in', dict(email=self.username,
-                                                      password=self.keys['pw'],
-                                                      **self.mfa_data))
+            if self.check_jwt_validity():
+                return self.keys
 
-            if self.check_mfa_error(res):
-                self.keys = self.sign_in(keys)
-            else:
-                self.api.add_header(dict(Authorization='Bearer ' + res['token']))
-                self.keys['jwt'] = res['token']
+        res = self.api.post('/auth/sign_in', dict(email=self.username,
+                                                    password=self.keys['pw'],
+                                                    **self.mfa_data))
+
+        if self.check_mfa_error(res):
+            self.keys = self.sign_in(keys)
+        else:
+            jwt = res['token']
+            self.api.add_header(dict(Authorization='Bearer ' + jwt))
+            self.keys['jwt'] = jwt
 
         return self.keys
 

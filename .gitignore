@@ -107,3 +107,6 @@ db.sqlite3
 
 # Test mount
 test/
+
+# VS Code
+.vscode/
