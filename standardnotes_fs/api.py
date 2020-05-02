@@ -44,7 +44,7 @@ class StandardNotesAPI:
                 return True
             else:
                 raise SNAPIException(res['error']['message'])
-    
+
 
     def check_jwt_validity(self):
         # this will return None if our jwt has been invalidated
