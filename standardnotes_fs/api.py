@@ -49,12 +49,7 @@ class StandardNotesAPI:
     def check_jwt_validity(self):
         # this will return None if our jwt has been invalidated
         res = self.api.post('/items/sync', dict(limit=1))
-        if not res:
-            # Remove the invalid jwt
-            del self.keys['jwt']
-            return False
-        else:
-            return True
+        return res
 
 
     def get_auth_params_for_email(self):
