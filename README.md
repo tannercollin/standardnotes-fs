@@ -73,7 +73,7 @@ usage: snfs [-h] [--username USERNAME] [--password PASSWORD]
             [-v] [--foreground] [--sync-sec SYNC_SEC]
             [--sync-url SYNC_URL] [--ext EXT]
             [--no-config-files] [--config CONFIG]
-            [--creds CREDS] [--logout] [-u]
+            [--creds CREDS] [--allow-other] [--logout] [-u]
             [mountpoint]
 
 positional arguments:
@@ -97,6 +97,7 @@ optional arguments:
                        /home/tanner/.config/standardnotes-fs/standardnotes-fs.conf
   --creds CREDS        specify a credentials file location. Defaults to:
                        /home/tanner/.cache/standardnotes-fs/standardnotes-fs.conf
+  --allow-other        allow other system users access
   --logout             remove config files and user credentials
   -u, --unmount        unmount [mountpoint] folder
 

@@ -60,6 +60,8 @@ def parse_options():
     parser.add_argument('--creds', default=CREDS_FILE,
                         help='specify a credentials file location. Defaults to:\n'
                         ''+str(CREDS_FILE))
+    parser.add_argument('--allow-other', action='store_true',
+                        help='allow other system users access')
     parser.add_argument('--logout', action='store_true',
                         help='remove config files and user credentials')
     parser.add_argument('-u', '--unmount', action='store_true',
@@ -258,7 +260,7 @@ def main():
             fuse = FUSE(StandardNotesFUSE(sn_api, sync_sec, args.ext),
                         args.mountpoint, use_ino=True,
                         foreground=args.foreground,
-                        allow_other=True,
+                        allow_other=args.allow_other,
                         nothreads=True) # FUSE can't make threads, but we can
         except RuntimeError as e:
             print('Error mounting file system.')
