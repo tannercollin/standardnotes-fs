@@ -13,8 +13,8 @@ from requests.exceptions import ConnectionError
 
 from standardnotes_fs.itemmanager import ItemManager
 
-DIR_PERMISSIONS = 0o700
-FILE_PERMISSIONS = 0o600
+DIR_PERMISSIONS = 0o750
+FILE_PERMISSIONS = 0o640
 ROOT_INODE = 0
 TAGS_INODE = 1
 TRASH_INODE = 2
