@@ -258,6 +258,7 @@ def main():
             fuse = FUSE(StandardNotesFUSE(sn_api, sync_sec, args.ext),
                         args.mountpoint, use_ino=True,
                         foreground=args.foreground,
+                        allow_other=True,
                         nothreads=True) # FUSE can't make threads, but we can
         except RuntimeError as e:
             print('Error mounting file system.')
