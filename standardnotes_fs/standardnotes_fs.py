@@ -261,6 +261,7 @@ def main():
                         args.mountpoint, use_ino=True,
                         foreground=args.foreground,
                         allow_other=args.allow_other,
+                        default_permissions=True,
                         nothreads=True) # FUSE can't make threads, but we can
         except RuntimeError as e:
             print('Error mounting file system.')
