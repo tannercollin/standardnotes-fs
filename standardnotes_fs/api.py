@@ -107,8 +107,12 @@ class StandardNotesAPI:
 
     def sync(self, dirty_items):
         items = self.handle_dirty_items(dirty_items)
-        response = self.api.post('/items/sync', dict(sync_token=self.sync_token,
-                                                     items=items))
+        data = dict(
+            sync_token=self.sync_token,
+            items=items,
+            api='20190520',
+        )
+        response = self.api.post('/items/sync', data)
 
         if not response:
             raise SNAPIException('Error accessing the Standard Notes API.')
