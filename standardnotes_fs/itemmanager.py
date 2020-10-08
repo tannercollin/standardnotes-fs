@@ -78,7 +78,6 @@ class ItemManager:
         # remove keys
         for item in dirty_items:
             item.pop('dirty', None)
-            item.pop('updated_at', None)
             item.pop('count', None)
 
         response = self.sn_api.sync(dirty_items)
@@ -142,7 +141,9 @@ class ItemManager:
         ref = item['content']
         ref = ref.setdefault('appData', {})
         ref = ref.setdefault('org.standardnotes.sn', {})
-        ref['client_updated_at'] = datetime.utcnow().isoformat() + 'Z'
+
+        now = datetime.utcnow().isoformat()[:-3] + 'Z'
+        ref['client_updated_at'] = now
 
     def touch_note(self, uuid):
         item = self.items[uuid]
