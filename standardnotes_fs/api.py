@@ -1,6 +1,7 @@
 import json
 import requests
 import sys
+import logging
 
 from standardnotes_fs.crypt import EncryptionHelper
 
@@ -20,10 +21,14 @@ class RESTAPI:
 
     def post(self, route, data=None):
         url = self.base_url + route
+
+        logging.debug('POST json: ' + json.dumps(data, indent=4))
+
         res = requests.post(url, json=data, headers=self.headers)
 
         # res.json() will fail if the response is empty/invalid JSON
         try:
+            logging.debug('Response json: ' + json.dumps(res.json(), indent=4))
             return res.json()
         except json.decoder.JSONDecodeError:
             return None
