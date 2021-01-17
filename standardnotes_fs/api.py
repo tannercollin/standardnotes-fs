@@ -71,7 +71,6 @@ class StandardNotesAPI:
 
         email = pw_info['identifier']
         version = pw_info['version']
-        pw_cost = pw_info['pw_cost']
         pw_nonce = pw_info['pw_nonce']
 
         if version == '001':
@@ -83,8 +82,15 @@ class StandardNotesAPI:
         elif version == '002':
             pw_salt = pw_info['pw_salt']
         elif version == '003':
+            pw_cost = pw_info['pw_cost']
             pw_salt = self.encryption_helper.generate_salt_from_nonce(
                 email, version, str(pw_cost), pw_nonce)
+        elif version == '004':
+            print('New authentication protocol version 004 detected.')
+            print('This version is not supported by standardnotes-fs yet.')
+            print('Please rollback / restore from backup to use.')
+            print('More info about 004:\nhttps://standardnotes.org/help/security')
+            sys.exit(1)
 
         return self.encryption_helper.generate_password_and_key(
                 password, pw_salt, pw_cost)
