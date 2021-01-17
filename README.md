@@ -7,6 +7,8 @@ This allows you to edit your notes in your favorite text editor, use standard \*
 
 This is an _unofficial_ Standard Notes client.
 
+**Important:** standardnotes-fs only works with protocol version 003 accounts. It's unlikely I'll add 004 support, so don't upgrade your account if you want to use this.
+
 ## Example
 
 ```text
