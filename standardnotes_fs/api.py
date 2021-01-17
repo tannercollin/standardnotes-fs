@@ -59,6 +59,7 @@ class StandardNotesAPI:
 
     def get_auth_params_for_email(self):
         res = self.api.get('/auth/params', dict(email=self.username,
+                                                api='20190520',
                                                 **self.mfa_data))
         if self.check_mfa_error(res):
             return self.get_auth_params_for_email()
@@ -99,6 +100,8 @@ class StandardNotesAPI:
 
         res = self.api.post('/auth/sign_in', dict(email=self.username,
                                                     password=self.keys['pw'],
+                                                    api='20190520',
+                                                    ephemeral=False,
                                                     **self.mfa_data))
 
         if self.check_mfa_error(res):
