@@ -7,7 +7,8 @@ import json
 import logging
 import sys
 
-from Crypto.Cipher import AES
+import argon2
+from Crypto.Cipher import AES, ChaCha20_Poly1305
 from Crypto.Random import random
 from Crypto.Util import Padding
 
@@ -39,6 +40,36 @@ class EncryptionHelper:
         ak = output[split_length * 2 : split_length * 3]
 
         return dict(pw=pw, mk=mk, ak=ak)
+
+    def generate_password_and_key_004(
+                self, password, email, pw_nonce
+            ):
+        string_to_hash = email + ":" + pw_nonce
+        print("Hashing:", string_to_hash)
+        salt = hashlib.sha256(string_to_hash.encode()).hexdigest()[:32]
+        print("Salt:", salt)
+
+        argon2_hash = argon2.low_level.hash_secret_raw(
+            secret=password.encode(),
+            salt=unhexlify(salt),
+            time_cost=5,
+            memory_cost=65536,
+            parallelism=1,
+            hash_len=64,
+            type=argon2.Type.ID,
+        )
+        derived_key = hexlify(argon2_hash).decode()
+
+        print("Derived key:", derived_key, "Length:", len(derived_key))
+
+        master_key = derived_key[:64]
+        server_password = derived_key[64:]
+
+        print()
+        print("Master key:", master_key)
+        print("Server password:", server_password)
+
+        return dict(pw=server_password, mk=master_key)
 
     def encrypt_dirty_items(self, dirty_items, keys):
         return [self.encrypt_item(item, keys) for item in dirty_items]

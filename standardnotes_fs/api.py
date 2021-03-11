@@ -5,6 +5,8 @@ import logging
 
 from standardnotes_fs.crypt import EncryptionHelper
 
+API_VERSION = '20200115'
+#API_VERSION = '20190520'
 ALLOWED_ITEM_TYPES = ['Note', 'Tag']
 
 class SNAPIException(Exception):
@@ -51,6 +53,7 @@ class StandardNotesAPI:
                 raise SNAPIException(res['error']['message'])
 
 
+
     def check_jwt_validity(self):
         # this will return None if our jwt has been invalidated
         res = self.api.post('/items/sync', dict(limit=1))
@@ -59,7 +62,7 @@ class StandardNotesAPI:
 
     def get_auth_params_for_email(self):
         res = self.api.get('/auth/params', dict(email=self.username,
-                                                api='20190520',
+                                                api=API_VERSION,
                                                 **self.mfa_data))
         if self.check_mfa_error(res):
             return self.get_auth_params_for_email()
@@ -85,15 +88,12 @@ class StandardNotesAPI:
             pw_cost = pw_info['pw_cost']
             pw_salt = self.encryption_helper.generate_salt_from_nonce(
                 email, version, str(pw_cost), pw_nonce)
-        elif version == '004':
-            print('New authentication protocol version 004 detected.')
-            print('This version is not supported by standardnotes-fs yet.')
-            print('Please rollback / restore from backup to use.')
-            print('More info about 004:\nhttps://standardnotes.org/help/security')
-            sys.exit(1)
-
-        return self.encryption_helper.generate_password_and_key(
+            return self.encryption_helper.generate_password_and_key(
                 password, pw_salt, pw_cost)
+        elif version == '004':
+            return self.encryption_helper.generate_password_and_key_004(
+                password, email, pw_nonce
+            )
 
     def sign_in(self, keys):
         self.keys = keys
@@ -106,25 +106,37 @@ class StandardNotesAPI:
 
         res = self.api.post('/auth/sign_in', dict(email=self.username,
                                                     password=self.keys['pw'],
-                                                    api='20190520',
+                                                    api=API_VERSION,
                                                     ephemeral=False,
                                                     **self.mfa_data))
+
+        print("sign_in->res", res)
 
         if self.check_mfa_error(res):
             self.keys = self.sign_in(keys)
         else:
-            jwt = res['token']
-            self.api.add_header(dict(Authorization='Bearer ' + jwt))
-            self.keys['jwt'] = jwt
+            # v003
+            jwt = res.get('token')
+            if jwt is not None:
+                self.api.add_header(dict(Authorization='Bearer ' + jwt))
+                self.keys['jwt'] = jwt
+                return self.keys
+            # v004
+            try:
+                jwt = res['session']['access_token']
+                self.api.add_header(dict(Authorization='Bearer ' + jwt))
+                self.keys['jwt'] = jwt
+                return self.keys
+            except Exception as e:
+                print(e)
 
-        return self.keys
 
     def sync(self, dirty_items):
         items = self.handle_dirty_items(dirty_items)
         data = dict(
             sync_token=self.sync_token,
             items=items,
-            api='20190520',
+            api=API_VERSION,
         )
         response = self.api.post('/items/sync', data)
 
