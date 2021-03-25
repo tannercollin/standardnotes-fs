@@ -23,11 +23,12 @@ class ItemManager:
         content = item['content']
         content_type = item['content_type']
         original_title = content.get('title', 'Untitled')
+        conflicted = 'conflict_of' in content
 
         # remove title duplicates by adding a number to the end
         count = 0
         while True:
-            title = original_title + ('' if not count else str(count + 1))
+            title = original_title + ('' if not count else str(count + 1)) + (' CONFLICTED COPY' if conflicted else '')
 
             # clean up filenames
             title = title.replace('/', '-')
@@ -72,6 +73,18 @@ class ItemManager:
                     continue
                 self.items[uuid][key] = value
 
+    def copy_conflicts(self, response_items):
+        response_items = sorted(response_items, key=lambda x: x['created_at'])
+        for item in response_items:
+            if item['content_type'] != 'Note':
+                continue
+
+            old_uuid = item['uuid']
+            old_name = item['content']['title']
+            old_text = item['content']['text']
+            uuid = self.create_note(old_name, old_text)
+            self.items[uuid]['content']['conflict_of'] = old_uuid
+
     def sync_items(self):
         dirty_items = [deepcopy(item) for _, item in self.items.items() if item['dirty']]
 
@@ -83,6 +96,11 @@ class ItemManager:
         response = self.sn_api.sync(dirty_items)
         self.map_items(response['response_items'])
         self.map_items(response['saved_items'], metadata_only=True)
+        self.copy_conflicts(response['conflicts'])
+        self.map_items(response['conflicts'], metadata_only=True)
+
+        if len(response['conflicts']):
+            self.sync_items()
 
     def get_updated(self, item):
         try:
@@ -154,9 +172,9 @@ class ItemManager:
         item['content']['text'] = text.decode() # convert back to string
         self.set_dirty(item)
 
-    def create_note(self, name):
+    def create_note(self, name, text=''):
         uuid = str(uuid1())
-        content = dict(title=name, text='', references=[])
+        content = dict(title=name, text=text, references=[])
         creation_time = datetime.utcnow().isoformat() + 'Z'
         self.items[uuid] = dict(content_type='Note', auth_hash=None,
             uuid=uuid, created_at=creation_time, enc_item_key='',

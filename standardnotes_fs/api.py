@@ -146,7 +146,15 @@ class StandardNotesAPI:
                 valid_items, self.keys)
         saved_items = self.encryption_helper.decrypt_response_items(
                 response['saved_items'], self.keys)
-        return dict(response_items=response_items, saved_items=saved_items)
+        sync_conflicts = [x['server_item'] for x in response['conflicts']
+            if x['type'] == 'sync_conflict']
+        conflicts = self.encryption_helper.decrypt_response_items(
+                sync_conflicts, self.keys)
+        return dict(
+            response_items=response_items,
+            saved_items=saved_items,
+            conflicts=conflicts,
+        )
 
     def __init__(self, base_url, username):
         self.api = RESTAPI(base_url)
