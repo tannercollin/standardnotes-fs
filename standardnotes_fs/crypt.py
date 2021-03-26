@@ -7,7 +7,8 @@ import json
 import logging
 import sys
 
-from Crypto.Cipher import AES
+import argon2
+from Crypto.Cipher import AES, ChaCha20_Poly1305
 from Crypto.Random import random
 from Crypto.Util import Padding
 
@@ -39,6 +40,37 @@ class EncryptionHelper:
         ak = output[split_length * 2 : split_length * 3]
 
         return dict(pw=pw, mk=mk, ak=ak)
+
+    def generate_password_and_key_004(
+                self, password, email, pw_nonce
+            ):
+        string_to_hash = email + ":" + pw_nonce
+        print("Hashing:", string_to_hash)
+        salt = hashlib.sha256(string_to_hash.encode()).hexdigest()[:32]
+        print("Salt:", salt)
+
+        argon2_hash = argon2.low_level.hash_secret_raw(
+            secret=password.encode(),
+            salt=unhexlify(salt),
+            time_cost=5,
+            memory_cost=65536,
+            parallelism=1,
+            hash_len=64,
+            type=argon2.Type.ID,
+        )
+        derived_key = hexlify(argon2_hash).decode()
+
+        print("Derived key:", derived_key, "Length:", len(derived_key))
+
+        master_key = derived_key[:64]
+        server_password = derived_key[64:]
+
+        print()
+        print("Master key:", master_key)
+        print("Server password:", server_password)
+
+        return dict(server_password=server_password, master_key=master_key, 
+           pw=server_password)
 
     def encrypt_dirty_items(self, dirty_items, keys):
         return [self.encrypt_item(item, keys) for item in dirty_items]
@@ -93,10 +125,53 @@ class EncryptionHelper:
 
             dec_content = self.decrypt_string_003(
                     content, item_ek, item_ak, uuid)
-        else:
-            print('Invalid protocol version. This could indicate tampering or '
-                  'that something is wrong with the server. Exiting.')
-            sys.exit(1)
+        elif version == '004':
+            content_type = item["content_type"]
+            print(item, uuid, content, enc_item_key, version)
+
+            version, nonce, ciphertext, encoded_authenticated_data = enc_item_key.split(":")
+            authenticated_data = json.loads(b64decode(encoded_authenticated_data).decode())
+
+            print("        version:", version)
+            print("        nonce:", nonce)
+            print("        ciphertext:", ciphertext)
+            print("        auth data:", authenticated_data)
+
+            if content_type == "SN|ItemsKey":
+                key = keys['master_key']
+            else:
+                key = self.sn_api.default_items_key
+
+            print("        key:", key)
+
+            cipher = ChaCha20_Poly1305.new(key=unhexlify(key), nonce=unhexlify(nonce))
+            item_key = cipher.decrypt(b64decode(ciphertext))[:-16].decode()
+            print("        item_key", item_key)
+
+            print("    Decrypting content")
+
+            version, nonce, ciphertext, encoded_authenticated_data = content.split(":")
+            authenticated_data = json.loads(b64decode(encoded_authenticated_data).decode())
+
+            print("        version:", version)
+            print("        nonce:", nonce)
+            print("        ciphertext:", ciphertext)
+            print("        auth data:", authenticated_data)
+
+            cipher = ChaCha20_Poly1305.new(key=unhexlify(item_key), nonce=unhexlify(nonce))
+            plaintext = cipher.decrypt(b64decode(ciphertext))[:-16].decode()
+            print("        plaintext", plaintext)
+
+            plainjson = json.loads(plaintext)
+
+            if plainjson.get("isDefault", False):
+                self.sn_api.default_items_key = plainjson["itemsKey"]
+
+            if content_type == "Note":
+                notes[plainjson["title"]] = plainjson["text"]
+
+
+            dec_content = plainjson
 
         dec_item = deepcopy(item)
         dec_item['content'] = json.loads(dec_content)
@@ -154,3 +229,11 @@ class EncryptionHelper:
         result = Padding.unpad(result, AES.block_size).decode()
 
         return result
+
+    def decrypt_string_004(self, string_to_decrypt, encryption_key,
+                                auth_key, uuid):
+        pass
+
+    def __init__(self, sn_api=None):
+        """allow for a pointer back to an instantiating StandardNoteAPI object"""
+        self.sn_api = sn_api
