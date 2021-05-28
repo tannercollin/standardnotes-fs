@@ -24,7 +24,7 @@ class RESTAPI:
 
         logging.debug('POST json: ' + json.dumps(data, indent=4))
 
-        res = requests.post(url, json=data, headers=self.headers)
+        res = requests.post(url, data=data, headers=self.headers)
 
         # res.json() will fail if the response is empty/invalid JSON
         try:
