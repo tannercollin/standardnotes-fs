@@ -1,5 +1,7 @@
 # standardnotes-fs
 
+:warning: **Project archived**: Due to changes in the Standard Notes API and encryption, this program will no longer work.
+
 ## Description
 Mount your [Standard Notes](https://standardnotes.org/) account as a filesystem and edit your notes as plain text files.
 
